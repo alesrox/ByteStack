@@ -1,0 +1,6 @@
+func add(int a, int b) {
+    return a + b;
+}
+
+let int x = add(1, 2);
+print(x);

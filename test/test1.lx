@@ -1,0 +1,9 @@
+for (let int i = 0; i < 4) { print(i); }
+
+let int x = 0;
+while (x < 4) {
+    print(x);
+    x = x + 1;
+}
+
+print(x);

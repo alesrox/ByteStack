@@ -1,0 +1,6 @@
+// let int[] list = new int[];
+let int[] list = [1, 2, 3];
+list.append(40); 
+list[2] = 4;
+print(list);
+print(list.size());

@@ -1,0 +1,7 @@
+let int x = input();
+
+if (x < 0) {
+    print(2);
+} else {
+    print(3);
+}
