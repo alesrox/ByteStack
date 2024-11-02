@@ -66,7 +66,8 @@ class Parser:
         return Program(statements)
         
     def list_expresion(self):
-        if self.current_token.type == 'EMPTY_LIST':
+        if self.current_token.type == 'EMPTY_ARR':
+            self.next_token() # Consume '[]'
             return []
         
         items = []
@@ -78,7 +79,7 @@ class Parser:
         return items
 
     def expression(self):
-        if self.current_token.type in ('START_LIST', 'EMPTY_LIST'):
+        if self.current_token.type in ('START_LIST', 'EMPTY_ARR'):
             return self.list_expresion()
 
         if self.current_token.type == "LPAREN":
@@ -90,7 +91,7 @@ class Parser:
             self.next_token() # Consume ')'
             return expr
 
-        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'BOOL_LITERAL', 'IDENTIFIER']:
+        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'BOOL_LITERAL', 'STRING_LITERAL', 'IDENTIFIER']:
             token = self.lexer.clone().token()
             if token.type in ('SEMICOLON', 'COMMA', 'END_LIST', 'RPAREN'):
                 literal_type, value = self.current_token.type, self.current_token.value
@@ -110,6 +111,8 @@ class Parser:
 
             expr = self.binary_expression()
             return expr
+        
+        self.throw_error(f"Unexpected Token: {self.current_token}")
 
     def binary_expression(self, operator_group: int = 0):
         operators = (
@@ -160,11 +163,10 @@ class Parser:
         self.next_token() # Consume '='
 
         value = self.expression()
-        if '[]' in var_type and not isinstance(value, list):
+        if ('[]' in var_type) and not isinstance(value, list):
             self.throw_error("An array was expected")
 
         self.next_token() # Consume ';'
-    
         return Declaration(var_type, identifier, value)
     
     def identifier(self):

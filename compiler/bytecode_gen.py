@@ -1,4 +1,5 @@
 from syntax_tree import *
+from tools import string_to_list
 
 ByteCode = bytecode_instructions = {
     "ADD"           : 0x01,
@@ -30,6 +31,7 @@ ByteCode = bytecode_instructions = {
     "BUILD_LIST"    : 0x1B,
     "LIST_ACCESS"   : 0x1C,
     "LIST_SET"      : 0x1D,
+    "BUILD_STR"     : 0x1E,
     "SYSCALL"       : 0xFF
 }
 
@@ -77,12 +79,10 @@ class ByteCodeCompiler:
                     self.identifiers[node.identifier] = len(self.identifiers)
 
             self.add_instruction(node.value, scope)
-            if '[]' in node.var_type:
-                self.append_bytecode((bytecode_instructions["BUILD_LIST"], len(node.value)))
-            else:
-                self.append_bytecode((bytecode_instructions["STORE_LOCAL" if scope else "STORE_MEM"], -1))
+            self.append_bytecode((bytecode_instructions["STORE_LOCAL" if scope else "STORE_MEM"], -1))
         elif isinstance(node, Assignment):
             self.add_instruction(node.value, scope)
+
             if isinstance(node.identifier, ListNode):
                 identifier = node.identifier.identifier
                 if scope and identifier in self.locals:
@@ -95,7 +95,6 @@ class ByteCodeCompiler:
                 else:
                     self.add_instruction(node.identifier.index)
                     self.append_bytecode((bytecode_instructions["LIST_SET"], -1))
-                    
             elif scope and node.identifier in self.locals: 
                 self.append_bytecode((bytecode_instructions["STORE_LOCAL"], self.locals[node.identifier]))
             else:
@@ -111,6 +110,12 @@ class ByteCodeCompiler:
                 self.append_bytecode((bytecode_instructions["STORE_FLOAT"], node.value))
             elif node.value_type == 'BOOL_LITERAL':
                 self.append_bytecode((bytecode_instructions["STORE"], 1 if node.value else 0))
+            elif node.value_type == 'STRING_LITERAL':
+                string = string_to_list(node.value)
+                for char in string[::-1]:
+                    self.append_bytecode((bytecode_instructions["STORE"], char))
+
+                self.append_bytecode((bytecode_instructions["BUILD_STR"], len(string)))
             elif node.value_type == 'IDENTIFIER':
                 if node.value in self.identifiers:
                     self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[node.value]))
@@ -220,6 +225,8 @@ class ByteCodeCompiler:
                     self.append_bytecode((bytecode_instructions["STORE_FLOAT"], item.value))
                 else:
                     self.append_bytecode((bytecode_instructions["STORE"], item.value))
+            
+            self.append_bytecode((bytecode_instructions["BUILD_LIST"], len(node)))
         elif isinstance(node, ListNode):
             if scope and node.identifier in self.locals:
                 self.append_bytecode((bytecode_instructions["LOAD_LOCAL"], self.locals[node.identifier]))

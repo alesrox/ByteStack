@@ -74,7 +74,7 @@ class Assignment(ASTNode):
             **super().to_dict(),
             "identifier": 
                 self.identifier.to_dict() if isinstance(self.identifier, ASTNode) else self.identifier,
-            "value": self.value.to_dict()
+            "value": self.value.to_dict() if isinstance(self.value, ASTNode) else self.value
         }
 
 class IfStatement(ASTNode):

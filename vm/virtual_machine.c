@@ -9,6 +9,7 @@ char* error_messages[ERR_COUNT] = {
 };
 
 void throw_error(char* msg) {
+    printf("\n");
     perror(msg);
     exit(EXIT_FAILURE);
 }
@@ -45,7 +46,7 @@ void run(VM *vm, int size) {
     do {
         Instruction instr = vm->memory[vm->pc++];
         DataItem n1, n2, result;
-        int index, array_access;
+        int index, array_access, aux, length;
 
         // printf("0x%02X - %d\n", instr.opcode, instr.arg.value);
         switch (instr.opcode) {
@@ -288,22 +289,28 @@ void run(VM *vm, int size) {
             case 0x1B: // BUILD_LIST
                 result.type = ARRAY_TYPE;
                 result.value = vm->asp++;
-                vm->data_memory[vm->mp++] = result;
 
-                int aux = result.value;
-                int length = (instr.arg.value < 4) ? 4 : (instr.arg.value + 3) & ~3u;
+                aux = result.value;
+                length = (instr.arg.value < 4) ? 4 : (instr.arg.value + 3) & ~3u;
                 create_array(&vm->array_storage[aux], length);
                 
                 for (int i = 0; i < instr.arg.value; i++) {
-                    result = pop(vm);
-                    if (i == 0) vm->array_storage[aux].type = result.type;
-                    append_array(&vm->array_storage[aux], result.value);
+                    n1 = pop(vm);
+                    if (i == 0) vm->array_storage[aux].type = n1.type;
+                    append_array(&vm->array_storage[aux], n1.value);
                 }
+
+                push(vm, result);
+                aux = vm->memory[vm->pc].opcode;
+                if (aux != 17 && aux != 24) vm->asp--;
                 break;
             
             case 0x1C: // LIST_ACCESS
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
-                array_access = vm->data_memory[pop(vm).value].value;
+                if (vm->fp == 0)
+                    array_access = vm->data_memory[pop(vm).value].value;
+                else
+                    array_access = vm->frames[vm->fp].locals[pop(vm).value].value;
 
                 result.type = vm->array_storage[array_access].type;
                 result.value = vm->array_storage[array_access].items[index];
@@ -313,13 +320,40 @@ void run(VM *vm, int size) {
             
             case 0x1D: // LIST_SET
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
-                array_access = vm->data_memory[pop(vm).value].value;
-                result = pop(vm);
+                if (vm->fp == 0)
+                    array_access = vm->data_memory[pop(vm).value].value;
+                else
+                    array_access = vm->frames[vm->fp].locals[pop(vm).value].value;
 
-                if (result.type != vm->array_storage[array_access].type)
+                result = pop(vm);
+                //printf("\n- %d\n", array_access);
+
+                if (result.type != vm->array_storage[array_access].type) {
+                    // printf("\n1- %d\n", result.type);
+                    // printf("\n2- %d\n", vm->array_storage[array_access].type);
                     throw_error(error_messages[ERR_BAD_TYPE_ARR]);
+                }
 
                 vm->array_storage[array_access].items[index] = result.value;
+                break;
+
+            case 0x1E: // BUILD_STR
+                result.type = ARRAY_TYPE;
+                result.value = vm->asp++;
+
+                aux = result.value;
+                length = (instr.arg.value < 4) ? 4 : (instr.arg.value + 3) & ~3u;
+                create_array(&vm->array_storage[aux], length);
+                
+                vm->array_storage[aux].type = CHAR_TYPE;
+                for (int i = 0; i < instr.arg.value; i++) {
+                    n1 = pop(vm);
+                    append_array(&vm->array_storage[aux], n1.value);
+                }
+
+                push(vm, result);
+                aux = vm->memory[vm->pc].opcode;
+                if (aux != 17 && aux != 24) vm->asp--;
                 break;
 
             case 0xFF: // SYSCALL

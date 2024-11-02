@@ -30,6 +30,41 @@ DataItem load_data(VM *vm, int address) {
     return vm->data_memory[address];
 }
 
+void sub_print(DataItem item) {
+    if (item.type == INT_TYPE) {
+        printf("%d", (int) item.value);
+    } else if (item.type == FLOAT_TYPE) {
+        printf("%g", extract_float(item));
+    } else if (item.type == CHAR_TYPE) {
+        printf("%c", (char) item.value);
+    }
+}
+
+void sup_print(VM* vm, DataItem element) {
+    if (element.type == ARRAY_TYPE) {
+        DynamicArray arr = vm->array_storage[element.value];
+
+        if (arr.type == CHAR_TYPE) {
+            for (int i = 0; i < arr.size; i++) {
+                DataItem item = {arr.type, arr.items[i]};
+                sub_print(item);
+            }
+        } else if (arr.type != ARRAY_TYPE){
+            printf("[");
+            for (int i = 0; i < arr.size; i++) {
+                DataItem item = {arr.type, arr.items[i]};
+                sub_print(item);
+                if (i != arr.size -1) printf(", ");
+            }
+            printf("]");
+        } else {
+            return;
+        }
+    } else {
+        sub_print(element);
+    }
+}
+
 void syscall(VM *vm, int arg) {
     DataItem element, aux;
     switch (arg) {
@@ -39,16 +74,7 @@ void syscall(VM *vm, int arg) {
 
         case 1: // print
             element = pop(vm);
-            if (element.type == INT_TYPE) {
-                printf("%d\n", element.value);
-            } else if (element.type == FLOAT_TYPE) {
-                printf("%g\n", extract_float(element));
-            } else if (element.type == ARRAY_TYPE) {
-                DynamicArray arr = vm->array_storage[element.value];
-                for (int i = 0; i < arr.size; i++) {
-                    printf("%d, ", arr.items[i]);
-                }
-            }
+            sup_print(vm, element);
             break;
 
         case 2: // input
@@ -60,8 +86,9 @@ void syscall(VM *vm, int arg) {
         case 3: // (list).append
             element = pop(vm);
             aux = pop(vm);
-            if (vm->array_storage[element.value].type != aux.type)
+            if (vm->array_storage[element.value].type != aux.type) {
                 throw_error(error_messages[ERR_BAD_TYPE_ARR]);
+            }
 
             append_array(&vm->array_storage[element.value], aux.value);
             break;
