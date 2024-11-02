@@ -35,3 +35,13 @@ def get_key(obj_dict: dict, element):
             return key
     
     return None
+
+def string_to_list(string: str) -> list:
+    list_from_string = []
+    string = string.replace('\\n', '\n')
+    string = string.replace('\\t', '\t')
+
+    for char in string:
+        list_from_string.append(ord(char))
+
+    return list_from_string

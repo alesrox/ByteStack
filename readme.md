@@ -37,7 +37,9 @@ The compiler supports several flags for debugging and output customization:
 * -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
 
 ## Future features to add
-- Chars and Strings support
+- Multi-dimensional arrays (Matrices)
+- Invalid Type Assignment Errors: Implementing checks in the parser to prevent the assignment of incompatible types, such as assigning a float literal to a string var.
+- Castings assigments
 - Multi-file scripts (like import statement from python or java)
 - R/W File functions
 - System control functions
