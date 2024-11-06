@@ -23,18 +23,20 @@ int load_program(VM *vm, const char *filename) {
     
     int num_instructions = size/5;
 
+    vm->data_segment.pointer = 0;
+    vm->data_segment.capacity = MEMORY_SIZE;
+    vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
     vm->memory = malloc(sizeof(Instruction) * num_instructions);
+
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
         vm->memory[i].arg.type = (vm->memory[i].opcode == 0x1F) ? FLOAT_TYPE : INT_TYPE; 
         fread(&vm->memory[i].arg.value, sizeof(uint32_t), 1, file);
-        //printf("opcode: %02X\n", vm->memory[i].opcode);
     }
 
     fclose(file);
 
     vm->pc = 0;
-    vm->mp = 0;
     vm->sp = 0;
     vm->fp = 0;
     vm->asp = 0;
@@ -46,7 +48,7 @@ void run(VM *vm, int size) {
     do {
         Instruction instr = vm->memory[vm->pc++];
         DataItem n1, n2, result;
-        int index, array_access, aux, length;
+        int address, index, array_access, aux, length;
 
         // printf("0x%02X - %d\n", instr.opcode, instr.arg.value);
         switch (instr.opcode) {
@@ -234,15 +236,11 @@ void run(VM *vm, int size) {
                 break;
 
             case 0x11: // STORE_MEM
-                if (instr.arg.value == -1) {
-                    vm->data_memory[vm->mp++] = pop(vm);
-                } else {
-                    vm->data_memory[instr.arg.value] = pop(vm);
-                }
+                store_data(&vm->data_segment, instr.arg.value, pop(vm));
                 break;
 
             case 0x12: // LOAD
-                push(vm, vm->data_memory[instr.arg.value]);
+                push(vm, vm->data_segment.data[instr.arg.value]);
                 break;
 
             case 0x13: // JUMP
@@ -255,34 +253,38 @@ void run(VM *vm, int size) {
                 break;
             
             case 0x15: // CREATE_SCOPE
-                if (vm->fp == IN_SIZE) throw_error(error_messages[ERR_RECURSION_LIMIT]);
-                vm->frames[vm->fp++].lp = 0;
+                if (vm->fp == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+
+                vm->frames[vm->fp].locals.pointer = 0;
+                vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
+                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->fp++].locals.capacity);
                 break;
             
             case 0x16: // DEL_SCOPE
-                vm->fp--;
+                free(vm->frames[vm->fp--].locals.data);
                 break;
 
             case 0x17: // CALL
-                if (vm->fp == IN_SIZE) throw_error(error_messages[ERR_RECURSION_LIMIT]);
-                vm->frames[vm->fp++].return_address = vm->pc;
-                vm->frames[vm->fp].lp = 0;
+                if (vm->fp == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+
+                vm->frames[vm->fp].locals.pointer = 0;
+                vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
+                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->fp++].locals.capacity);
+                vm->frames[vm->fp].return_address = vm->pc;
                 vm->pc = instr.arg.value;
+                vm->fp++;
                 break;
 
             case 0x18: // STORE_LOCAL
-                if (instr.arg.value == -1) {
-                    vm->frames[vm->fp].locals[vm->frames[vm->fp].lp++] = pop(vm);
-                } else {
-                    vm->frames[vm->fp].locals[instr.arg.value] = pop(vm);
-                }
+                store_data(&vm->frames[vm->fp++].locals, instr.arg.value, pop(vm));
                 break;
             
             case 0x19: // LOAD_LOCAL
-                push(vm, vm->frames[vm->fp].locals[instr.arg.value]);
+                push(vm, vm->frames[vm->fp].locals.data[instr.arg.value]);
                 break;
             
             case 0x1A: // RETURN
+                free(vm->frames[vm->fp--].locals.data);
                 vm->pc = vm->frames[--vm->fp].return_address;
                 break;
 
@@ -308,9 +310,9 @@ void run(VM *vm, int size) {
             case 0x1C: // LIST_ACCESS
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
                 if (vm->fp == 0)
-                    array_access = vm->data_memory[pop(vm).value].value;
+                    array_access = vm->data_segment.data[pop(vm).value].value;
                 else
-                    array_access = vm->frames[vm->fp].locals[pop(vm).value].value;
+                    array_access = vm->frames[vm->fp].locals.data[pop(vm).value].value;
 
                 result.type = vm->array_storage[array_access].type;
                 result.value = vm->array_storage[array_access].items[index];
@@ -321,16 +323,13 @@ void run(VM *vm, int size) {
             case 0x1D: // LIST_SET
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
                 if (vm->fp == 0)
-                    array_access = vm->data_memory[pop(vm).value].value;
+                    array_access = vm->data_segment.data[pop(vm).value].value;
                 else
-                    array_access = vm->frames[vm->fp].locals[pop(vm).value].value;
+                    array_access = vm->frames[vm->fp].locals.data[pop(vm).value].value;
 
                 result = pop(vm);
-                //printf("\n- %d\n", array_access);
 
                 if (result.type != vm->array_storage[array_access].type) {
-                    // printf("\n1- %d\n", result.type);
-                    // printf("\n2- %d\n", vm->array_storage[array_access].type);
                     throw_error(error_messages[ERR_BAD_TYPE_ARR]);
                 }
 
@@ -360,8 +359,6 @@ void run(VM *vm, int size) {
                 syscall(vm, instr.arg.value);
                 break;
         }
-
-        if (vm->mp == MEMORY_SIZE) throw_error(error_messages[ERR_MEMORY_OUT_OF_BOUNDS]);
     } while (vm->pc < size);
 }
 

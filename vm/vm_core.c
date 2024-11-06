@@ -1,4 +1,5 @@
 #include "virtual_machine.h"
+#include <math.h>
 
 void push(VM *vm, DataItem value) {
     if (vm->sp < STACK_SIZE)
@@ -12,22 +13,17 @@ DataItem pop(VM *vm) {
     return vm->stack[--vm->sp];
 }
 
-void store_data(VM *vm, int address, DataItem item) {
-    if (address == -1) address = vm->mp;
-    if (address >= 0 && address < MEMORY_SIZE) {
-        vm->data_memory[address].type = item.type;
-        vm->data_memory[address].value = item.value;
-        vm->mp++;
-    } else {
-        throw_error(error_messages[ERR_MEMORY_OUT_OF_BOUNDS]);
+void store_data(DataSegment *ds, int address, DataItem item) {
+    if (address == -1) {
+        address = ds->pointer;
+        ds->pointer++;
+        if (address >= ds->capacity) {
+            ds->capacity *= 2;
+            ds->data = realloc(ds->data, ds->capacity * sizeof(DataItem));
+        }
     }
-}
 
-DataItem load_data(VM *vm, int address) {
-    if (address < 0 || address > MEMORY_SIZE)
-        throw_error(error_messages[ERR_MEMORY_OUT_OF_BOUNDS]);
-
-    return vm->data_memory[address];
+    ds->data[address] = item;
 }
 
 void sub_print(DataItem item) {

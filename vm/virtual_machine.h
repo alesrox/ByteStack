@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define IN_SIZE 128
+#define RECURSION_LIMIT 128
 #define STACK_SIZE 256
-#define MEMORY_SIZE 1024
+#define MEMORY_SIZE 512
 
 typedef enum {
     ERR_FILE_NOT_FOUND,
@@ -37,48 +37,51 @@ typedef struct {
 } DynamicArray;
 
 typedef struct {
+    int pointer;
+    int capacity;
+    DataItem* data;
+} DataSegment;
+
+typedef struct {
     uint8_t opcode;
     DataItem arg;
 } Instruction;
 
 typedef struct {
-    int lp; // local pointer
+    DataSegment locals;
     int return_address;
-    DataItem locals[IN_SIZE];
 } Frame;
 
 typedef struct {
     int pc; // program count
     int sp; // stack pointer
-    int mp; // memory pointer
     int fp; // frame pointer
     int asp; // array storage pointer
-    Instruction* memory;
+    Frame frames[RECURSION_LIMIT];
     DataItem stack[STACK_SIZE];
-    DataItem data_memory[MEMORY_SIZE];
-    Frame frames[IN_SIZE];
+    Instruction* memory;
+    DataSegment data_segment;
     DynamicArray array_storage[1024];
 } VM;
 
 // Virtual Machine Control
 int load_program(VM *vm, const char *filename);
-void run(VM *vm, int size);
 void throw_error(char* msg);
+void run(VM *vm, int size);
 
-// Stack Control
-void push(VM *vm, DataItem value);
+// VM Core
 DataItem pop(VM *vm);
+void push(VM *vm, DataItem value);
+void store_data(DataSegment *ds, int address, DataItem item);
 void syscall(VM *vm, int arg);
+void sub_print(DataItem item);
+void sup_print(VM* vm, DataItem element);
 
-// Memory Control
-void store_data(VM *vm, int address, DataItem item);
-DataItem load_data(VM *vm, int address);
-
-// Data Control
+// Data Utils
 float extract_float(DataItem item);
 float float_mod(float a, float b);
 
-// Arrays Control
+// Arrays Utils
 void create_array(DynamicArray *array, int initial_capacity);
 void resize_array(DynamicArray *array, int new_capacity);
 void append_array(DynamicArray *array, uint32_t value);

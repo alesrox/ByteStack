@@ -1,11 +1,6 @@
-print("Initial List: ");
+print("Hello World!\n");
 let int[] list = [1, 2, 3];
-print(list);
-
-print("\nNew list: ");
 list.append(40); 
-list[2] = 4;
 print(list);
-
 print("\nSize: ");
 print(list.size());
