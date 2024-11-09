@@ -84,11 +84,23 @@ class ByteCodeCompiler:
             self.add_instruction(node.value, scope)
 
             if isinstance(node.identifier, ListNode):
+                list_set = []
                 identifier = node.identifier.identifier
+                while isinstance(identifier, ListNode):
+                    list_set.append(identifier.index)
+                    identifier = identifier.identifier
+
                 if scope and identifier in self.locals:
                     self.append_bytecode((bytecode_instructions["LOAD_LOCAL"], self.locals[identifier]))
                 else:
                     self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[identifier]))
+                
+                for setter in list_set:
+                    if isinstance(setter, Expression):
+                        self.append_bytecode((bytecode_instructions["LIST_ACCESS"], setter.value))
+                    else:
+                        self.add_instruction(setter)
+                        self.append_bytecode((bytecode_instructions["LIST_ACCESS"], -1))
                 
                 if isinstance(node.identifier.index, Expression):
                     self.append_bytecode((bytecode_instructions["LIST_SET"], node.identifier.index.value))
@@ -221,23 +233,33 @@ class ByteCodeCompiler:
                 self.append_bytecode((bytecode_instructions["CALL"], self.identifiers[node.identifier] + 1))
         elif isinstance(node, list):
             for item in node[::-1]:
-                if item.value_type == 'FLOAT_LITERAL':
+                if isinstance(item, list):
+                    self.add_instruction(item)
+                elif item.value_type == 'FLOAT_LITERAL':
                     self.append_bytecode((bytecode_instructions["STORE_FLOAT"], item.value))
                 else:
                     self.append_bytecode((bytecode_instructions["STORE"], item.value))
             
             self.append_bytecode((bytecode_instructions["BUILD_LIST"], len(node)))
         elif isinstance(node, ListNode):
-            if scope and node.identifier in self.locals:
-                self.append_bytecode((bytecode_instructions["LOAD_LOCAL"], self.locals[node.identifier]))
+            list_access = []
+            identifier = node.identifier
+            while isinstance(identifier, ListNode):
+                list_access.append(identifier.index)
+                identifier = identifier.identifier
+
+            if scope and identifier in self.locals:
+                self.append_bytecode((bytecode_instructions["LOAD_LOCAL"], self.locals[identifier]))
             else:
-                self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[node.identifier]))
-            
-            if isinstance(node.index, Expression):
-                self.append_bytecode((bytecode_instructions["LIST_ACCESS"], node.index.value))
-            else:
-                self.add_instruction(node.index)
-                self.append_bytecode((bytecode_instructions["LIST_ACCESS"], -1))
+                self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[identifier]))
+
+            list_access.append(node.index)
+            for access in list_access:
+                if isinstance(access, Expression):
+                    self.append_bytecode((bytecode_instructions["LIST_ACCESS"], access.value))
+                else:
+                    self.add_instruction(access)
+                    self.append_bytecode((bytecode_instructions["LIST_ACCESS"], -1))
 
     def get_bytecode(self):
         return self.bytecode.copy()

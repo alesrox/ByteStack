@@ -107,7 +107,15 @@ class Parser:
                 self.next_token() # Consume '['
                 index = self.expression()
                 self.next_token() # Consume ']'
-                return ListNode(token.value, index)
+
+                identifier = ListNode(token.value, index)
+                while self.current_token.type == 'START_LIST':
+                    self.next_token() # Consume '['
+                    index = self.expression()
+                    self.next_token() # Conusme ']'
+                    identifier = ListNode(identifier, index)
+
+                return identifier
 
             expr = self.binary_expression()
             return expr
@@ -179,9 +187,14 @@ class Parser:
 
             if self.current_token.type != 'END_LIST':
                 self.throw_error(f"Expected an ']' symbol: {self.current_token}")
-
             self.next_token() # Consume ']'
+
             identifier = ListNode(identifier, index)
+            while self.current_token.type == 'START_LIST':
+                self.next_token() # Consume '['
+                index = self.expression()
+                self.next_token() # Conusme ']'
+                identifier = ListNode(identifier, index)
 
             if self.current_token.type == 'ASSIGN':
                 self.next_token() # Consume '='
