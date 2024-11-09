@@ -45,7 +45,16 @@ void sup_print(VM* vm, DataItem element) {
                 DataItem item = {arr.type, arr.items[i]};
                 sub_print(item);
             }
-        } else if (arr.type != ARRAY_TYPE){
+        } else if (arr.type == ARRAY_TYPE){
+            printf("[");
+            for (int i = 0; i < arr.size; i++) {
+                DataItem item = {arr.type, arr.items[i]};
+                //printf("%d - %d", arr.type, arr.items[i]);
+                sup_print(vm, item);
+                if (i != arr.size -1) printf(", ");
+            }
+            printf("]");
+        } else {
             printf("[");
             for (int i = 0; i < arr.size; i++) {
                 DataItem item = {arr.type, arr.items[i]};
@@ -53,8 +62,6 @@ void sup_print(VM* vm, DataItem element) {
                 if (i != arr.size -1) printf(", ");
             }
             printf("]");
-        } else {
-            return;
         }
     } else {
         sub_print(element);

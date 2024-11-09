@@ -304,16 +304,13 @@ void run(VM *vm, int size) {
 
                 push(vm, result);
                 aux = vm->memory[vm->pc].opcode;
-                if (aux != 17 && aux != 24) vm->asp--;
+                if (aux == 255) vm->asp--;
                 break;
             
             case 0x1C: // LIST_ACCESS
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
-                if (vm->fp == 0)
-                    array_access = vm->data_segment.data[pop(vm).value].value;
-                else
-                    array_access = vm->frames[vm->fp].locals.data[pop(vm).value].value;
-
+                array_access = pop(vm).value;
+                
                 result.type = vm->array_storage[array_access].type;
                 result.value = vm->array_storage[array_access].items[index];
 
@@ -322,18 +319,8 @@ void run(VM *vm, int size) {
             
             case 0x1D: // LIST_SET
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
-                if (vm->fp == 0)
-                    array_access = vm->data_segment.data[pop(vm).value].value;
-                else
-                    array_access = vm->frames[vm->fp].locals.data[pop(vm).value].value;
-
-                result = pop(vm);
-
-                if (result.type != vm->array_storage[array_access].type) {
-                    throw_error(error_messages[ERR_BAD_TYPE_ARR]);
-                }
-
-                vm->array_storage[array_access].items[index] = result.value;
+                array_access = pop(vm).value;
+                vm->array_storage[array_access].items[index] = pop(vm).value;
                 break;
 
             case 0x1E: // BUILD_STR
