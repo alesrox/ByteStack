@@ -253,11 +253,12 @@ void run(VM *vm, int size) {
                 break;
             
             case 0x15: // CREATE_SCOPE
-                if (vm->fp == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+                if (vm->fp >= RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
 
                 vm->frames[vm->fp].locals.pointer = 0;
                 vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
-                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->fp++].locals.capacity);
+                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->fp].locals.capacity);
+                vm->fp++;
                 break;
             
             case 0x16: // DEL_SCOPE
@@ -269,23 +270,25 @@ void run(VM *vm, int size) {
 
                 vm->frames[vm->fp].locals.pointer = 0;
                 vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
-                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->fp++].locals.capacity);
+                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * MEMORY_SIZE);
                 vm->frames[vm->fp].return_address = vm->pc;
                 vm->pc = instr.arg.value;
                 vm->fp++;
                 break;
 
             case 0x18: // STORE_LOCAL
-                store_data(&vm->frames[vm->fp++].locals, instr.arg.value, pop(vm));
+                n1 = pop(vm);
+                store_data(&vm->frames[vm->fp - 1].locals, instr.arg.value, n1);
                 break;
             
             case 0x19: // LOAD_LOCAL
-                push(vm, vm->frames[vm->fp].locals.data[instr.arg.value]);
+                push(vm, vm->frames[vm->fp - 1].locals.data[instr.arg.value]);
                 break;
             
             case 0x1A: // RETURN
-                free(vm->frames[vm->fp--].locals.data);
+                free(vm->frames[vm->fp - 1].locals.data);
                 vm->pc = vm->frames[--vm->fp].return_address;
+                vm->fp--;
                 break;
 
             case 0x1B: // BUILD_LIST
