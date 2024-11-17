@@ -48,28 +48,37 @@ int load_program(VM *vm, const char *filename) {
 void run(VM *vm, int size) {
     do {
         Instruction instr = vm->memory[vm->pc++];
-        DataItem n1, n2, result;
+        DataItem left, right, result;
         int address, index, array_access, aux, length;
 
         // printf("0x%02X - %d\n", instr.opcode, instr.arg.value);
-        switch (instr.opcode) {
-            case 0x01: // ADD
-                n1 = pop(vm);
-                n2 = pop(vm);
+        if (instr.opcode < 0x0F) {
+            right = (instr.opcode != 0x08) ? pop(vm) : (DataItem){0, 0};
+            left = pop(vm);
 
-                if (n1.type == ARRAY_TYPE && n2.type == ARRAY_TYPE) {
-                    DynamicArray arr = vm->array_storage[n1.value];
-                    if (vm->array_storage[n2.value].type == CHAR_TYPE && arr.type != CHAR_TYPE) {
-                        convert_list_to_str(vm, &vm->array_storage[n2.value], arr);
+            // Only ints or floats
+            if (right.type + left.type <= 2) {
+                result = alu(vm, left, right, instr.opcode);
+                push(vm, result);
+                continue;
+            } 
+        }
+
+        switch (instr.opcode) {
+            case 0x01: // ADD -> Only if some of one are an array -> WILL BE MODIFIED
+                if (right.type == ARRAY_TYPE && left.type == ARRAY_TYPE) {
+                    DynamicArray arr = vm->array_storage[right.value];
+                    if (vm->array_storage[left.value].type == CHAR_TYPE && arr.type != CHAR_TYPE) {
+                        convert_list_to_str(vm, &vm->array_storage[left.value], arr);
                     } else {
                         for (int i = 0; i < arr.size; i++)
-                            append_array(&vm->array_storage[n2.value], arr.items[i]);
+                            append_array(&vm->array_storage[left.value], arr.items[i]);
                     }
 
-                    result = n2;
-                } else if (n1.type == ARRAY_TYPE ^ n2.type == ARRAY_TYPE) {
-                    DynamicArray* arr = &vm->array_storage[(n1.type == ARRAY_TYPE) ? n1.value : n2.value];
-                    DataItem item = (n1.type != ARRAY_TYPE) ? n1 : n2;
+                    result = left;
+                } else /*if (right.type == ARRAY_TYPE ^ left.type == ARRAY_TYPE)*/ {
+                    DynamicArray* arr = &vm->array_storage[(right.type == ARRAY_TYPE) ? right.value : left.value];
+                    DataItem item = (right.type != ARRAY_TYPE) ? right : left;
 
                     void (*convert_func)(DynamicArray*, uint32_t);
                     convert_func = (item.type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
@@ -77,174 +86,8 @@ void run(VM *vm, int size) {
                     if (arr->type == CHAR_TYPE) convert_func(arr, item.value);
                     else append_array(arr, item.value);
 
-                    result = (n1.type == ARRAY_TYPE) ? n1 : n2;
-                } else if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
-                    result.type = FLOAT_TYPE;
-                    result.value = format_float(extract_float(n2) + extract_float(n1));
-                } else {
-                    result.type = INT_TYPE;
-                    result.value = n2.value + n1.value;
+                    result = (right.type == ARRAY_TYPE) ? right : left;
                 }
-
-                push(vm, result);
-                break;
-
-            case 0x02: // SUB
-                n1 = pop(vm);
-                n2 = pop(vm);
-
-                if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
-                    result.type = FLOAT_TYPE;
-                    result.value = format_float(extract_float(n1) - extract_float(n2));
-                } else {
-                    result.type = INT_TYPE;
-                    result.value = n1.value - n2.value;
-                }
-
-                push(vm, result);
-                break;
-
-            case 0x03: // MUL
-                n1 = pop(vm);
-                n2 = pop(vm);
-
-                if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
-                    result.type = FLOAT_TYPE;
-                    result.value = format_float(extract_float(n1) * extract_float(n2));
-                } else {
-                    result.type = INT_TYPE;
-                    result.value = n1.value * n2.value;
-                }
-
-                push(vm, result);
-                break;
-
-            case 0x04: // DIV
-                n1 = pop(vm);
-                n2 = pop(vm);
-
-                result.type = FLOAT_TYPE;
-                result.value = format_float(extract_float(n1) / extract_float(n2));
-
-                push(vm, result);
-                break;
-
-            case 0x05: // MOD
-                n1 = pop(vm);
-                n2 = pop(vm);
-
-                if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
-                    result.type = FLOAT_TYPE;
-                    result.value = format_float(float_mod(extract_float(n1), extract_float(n2)));
-                } else {
-                    result.type = INT_TYPE;
-                    result.value = n1.value % n2.value;
-                }
-
-                push(vm, result);
-                break;
-
-            case 0x06: // AND
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (n1.value && n2.value);
-
-                push(vm, result);
-                break;
-
-            case 0x07: // OR
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (n1.value || n2.value);
-
-                push(vm, result);
-                break;
-
-            case 0x08: // NOT
-                n1 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = !n1.value;
-
-                push(vm, result);
-                break;
-
-            case 0x09: // EQ
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (
-                    ((n1.type == FLOAT_TYPE) ? extract_float(n1) : (int) n1.value)
-                    ==
-                    ((n2.type == FLOAT_TYPE) ? extract_float(n2) : (int) n2.value)
-                );
-
-                push(vm, result);
-                break;
-
-            case 0x0A: // NEQ
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (
-                    ((n1.type == FLOAT_TYPE) ? extract_float(n1) : (int) n1.value)
-                    !=
-                    ((n2.type == FLOAT_TYPE) ? extract_float(n2) : (int) n2.value)
-                );
-
-                push(vm, result);
-                break;
-
-            case 0x0B: // LT
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-
-                result.value = (
-                    ((n2.type == FLOAT_TYPE) ? extract_float(n2) : (int) n2.value)
-                    <
-                    ((n1.type == FLOAT_TYPE) ? extract_float(n1) : (int) n1.value)
-                );
-
-                push(vm, result);
-                break;
-
-            case 0x0C: // GT
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (
-                    ((n2.type == FLOAT_TYPE) ? extract_float(n2) : (int) n2.value)
-                    >
-                    ((n1.type == FLOAT_TYPE) ? extract_float(n1) : (int) n1.value)
-                );
-
-                push(vm, result);
-                break;
-
-            case 0x0D: // LE
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (
-                    ((n2.type == FLOAT_TYPE) ? extract_float(n2) : (int) n2.value)
-                    <=
-                    ((n1.type == FLOAT_TYPE) ? extract_float(n1) : (int) n1.value)
-                );
-
-                push(vm, result);
-                break;
-
-            case 0x0E: // GE
-                n1 = pop(vm);
-                n2 = pop(vm);
-                result.type = INT_TYPE;
-                result.value = (
-                    ((n2.type == FLOAT_TYPE) ? extract_float(n2) : (int) n2.value)
-                    >=
-                    ((n1.type == FLOAT_TYPE) ? extract_float(n1) : (int) n1.value)
-                );
 
                 push(vm, result);
                 break;
@@ -299,8 +142,8 @@ void run(VM *vm, int size) {
                 break;
 
             case 0x18: // STORE_LOCAL
-                n1 = pop(vm);
-                store_data(&vm->frames[vm->fp - 1].locals, instr.arg.value, n1);
+                left = pop(vm);
+                store_data(&vm->frames[vm->fp - 1].locals, instr.arg.value, left);
                 break;
             
             case 0x19: // LOAD_LOCAL
@@ -322,9 +165,9 @@ void run(VM *vm, int size) {
                 create_array(&vm->array_storage[aux], length);
                 
                 for (int i = 0; i < instr.arg.value; i++) {
-                    n1 = pop(vm);
-                    if (i == 0) vm->array_storage[aux].type = n1.type;
-                    append_array(&vm->array_storage[aux], n1.value);
+                    left = pop(vm);
+                    if (i == 0) vm->array_storage[aux].type = left.type;
+                    append_array(&vm->array_storage[aux], left.value);
                 }
 
                 push(vm, result);
@@ -357,8 +200,8 @@ void run(VM *vm, int size) {
                 
                 vm->array_storage[aux].type = CHAR_TYPE;
                 for (int i = 0; i < instr.arg.value; i++) {
-                    n1 = pop(vm);
-                    append_array(&vm->array_storage[aux], n1.value);
+                    left = pop(vm);
+                    append_array(&vm->array_storage[aux], left.value);
                 }
 
                 push(vm, result);
