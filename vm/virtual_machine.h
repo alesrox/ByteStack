@@ -12,6 +12,7 @@ typedef enum {
     ERR_MEMORY_OUT_OF_BOUNDS,
     ERR_EMPTY_STACK,
     ERR_BAD_TYPE_ARR,
+    ERR_OUT_OF_BOUNDS,
     ERR_COUNT 
 } ErrorCode;
 
@@ -78,6 +79,7 @@ void sub_print(DataItem item);
 void sup_print(VM* vm, DataItem element);
 
 // Data Utils
+uint32_t format_float(float value);
 float extract_float(DataItem item);
 float float_mod(float a, float b);
 
@@ -85,5 +87,10 @@ float float_mod(float a, float b);
 void create_array(DynamicArray *array, int initial_capacity);
 void resize_array(DynamicArray *array, int new_capacity);
 void append_array(DynamicArray *array, uint32_t value);
+void remove_at(DynamicArray* array, int index);
 void remove_last(DynamicArray *array);
 
+// Stings Utils
+void convert_int_to_str(DynamicArray *arr, uint32_t value);
+void convert_float_to_str(DynamicArray *arr, uint32_t value);
+void convert_list_to_str(VM* vm, DynamicArray* arr, DynamicArray list);

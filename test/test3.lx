@@ -1,6 +1,6 @@
-print("Hello World!\n");
 let int[] list = [1, 2, 3];
+print("List: " + list + "\n");
 list.append(40); 
-print(list);
-print("\nSize: ");
-print(list.size());
+list.remove(1); 
+print("Modded list: " + list + "\n");
+print("Size list: " + list.size());

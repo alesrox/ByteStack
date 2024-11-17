@@ -17,7 +17,7 @@ class Parser:
     
     def throw_error(self, msg: str):
         token = self.current_token
-        raise Exception(f"Compilation Error on line {token.lineno} and lexpos {token.lexpos}: {msg}")
+        print(f"Compilation Error on line {token.lineno} and lexpos {token.lexpos}: {msg}")
         exit()
     
     def program(self) -> Program:
@@ -144,10 +144,20 @@ class Parser:
         return left
     
     def literal_expression(self):
-        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL', 'IDENTIFIER']:
+        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL']:
             token = self.current_token
             self.next_token()
-            return Expression(token.type, token.value) 
+            return Expression(token.type, token.value)
+        elif self.current_token.type == 'IDENTIFIER':
+            identifier = self.current_token.value
+            self.next_token()
+            if self.current_token.type == 'POINT':
+                self.next_token() # Consume '.'
+                func_id = self.current_token.value
+                self.next_token() # Consume FUNC_NAME_TYPE
+                identifier = self.function_call(func_id, identifier)
+            
+            return Expression('IDENTIFIER', identifier)
 
         self.throw_error(f"Unexpected expresion: {self.current_token}")
 

@@ -1,16 +1,17 @@
 #include "virtual_machine.h"
 
+const int STORE_FLOAT_CODE = 0x10;
 char* error_messages[ERR_COUNT] = {
     "Error: Binary file not found",
     "Error: Maximum recursion depth exceeded",
     "Error: Memory access out of bounds",
     "Error: Attempted to access an empty stack",
-    "Error: Tried to store incorrect type on a array"
+    "Error: Tried to store incorrect type on a array",
+    "Error: Index out of bounds",
 };
 
 void throw_error(char* msg) {
-    printf("\n");
-    perror(msg);
+    printf("\nExecution error: %s", msg);
     exit(EXIT_FAILURE);
 }
 
@@ -30,7 +31,7 @@ int load_program(VM *vm, const char *filename) {
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
-        vm->memory[i].arg.type = (vm->memory[i].opcode == 0x1F) ? FLOAT_TYPE : INT_TYPE; 
+        vm->memory[i].arg.type = (vm->memory[i].opcode == STORE_FLOAT_CODE) ? FLOAT_TYPE : INT_TYPE; 
         fread(&vm->memory[i].arg.value, sizeof(uint32_t), 1, file);
     }
 
@@ -56,12 +57,33 @@ void run(VM *vm, int size) {
                 n1 = pop(vm);
                 n2 = pop(vm);
 
-                if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
+                if (n1.type == ARRAY_TYPE && n2.type == ARRAY_TYPE) {
+                    DynamicArray arr = vm->array_storage[n1.value];
+                    if (vm->array_storage[n2.value].type == CHAR_TYPE && arr.type != CHAR_TYPE) {
+                        convert_list_to_str(vm, &vm->array_storage[n2.value], arr);
+                    } else {
+                        for (int i = 0; i < arr.size; i++)
+                            append_array(&vm->array_storage[n2.value], arr.items[i]);
+                    }
+
+                    result = n2;
+                } else if (n1.type == ARRAY_TYPE ^ n2.type == ARRAY_TYPE) {
+                    DynamicArray* arr = &vm->array_storage[(n1.type == ARRAY_TYPE) ? n1.value : n2.value];
+                    DataItem item = (n1.type != ARRAY_TYPE) ? n1 : n2;
+
+                    void (*convert_func)(DynamicArray*, uint32_t);
+                    convert_func = (item.type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
+
+                    if (arr->type == CHAR_TYPE) convert_func(arr, item.value);
+                    else append_array(arr, item.value);
+
+                    result = (n1.type == ARRAY_TYPE) ? n1 : n2;
+                } else if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
                     result.type = FLOAT_TYPE;
-                    result.value = extract_float(n1) + extract_float(n2);
+                    result.value = format_float(extract_float(n2) + extract_float(n1));
                 } else {
                     result.type = INT_TYPE;
-                    result.value = n1.value + n2.value;
+                    result.value = n2.value + n1.value;
                 }
 
                 push(vm, result);
@@ -73,7 +95,7 @@ void run(VM *vm, int size) {
 
                 if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
                     result.type = FLOAT_TYPE;
-                    result.value = extract_float(n1) - extract_float(n2);
+                    result.value = format_float(extract_float(n1) - extract_float(n2));
                 } else {
                     result.type = INT_TYPE;
                     result.value = n1.value - n2.value;
@@ -88,7 +110,7 @@ void run(VM *vm, int size) {
 
                 if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
                     result.type = FLOAT_TYPE;
-                    result.value = extract_float(n1) * extract_float(n2);
+                    result.value = format_float(extract_float(n1) * extract_float(n2));
                 } else {
                     result.type = INT_TYPE;
                     result.value = n1.value * n2.value;
@@ -102,7 +124,7 @@ void run(VM *vm, int size) {
                 n2 = pop(vm);
 
                 result.type = FLOAT_TYPE;
-                result.value = extract_float(n1) / extract_float(n2);
+                result.value = format_float(extract_float(n1) / extract_float(n2));
 
                 push(vm, result);
                 break;
@@ -113,7 +135,7 @@ void run(VM *vm, int size) {
 
                 if (n1.type == FLOAT_TYPE || n2.type == FLOAT_TYPE) {
                     result.type = FLOAT_TYPE;
-                    result.value = float_mod(extract_float(n1), extract_float(n2));
+                    result.value = format_float(float_mod(extract_float(n1), extract_float(n2)));
                 } else {
                     result.type = INT_TYPE;
                     result.value = n1.value % n2.value;
@@ -307,7 +329,6 @@ void run(VM *vm, int size) {
 
                 push(vm, result);
                 aux = vm->memory[vm->pc].opcode;
-                if (aux == 255) vm->asp--;
                 break;
             
             case 0x1C: // LIST_ACCESS
@@ -342,7 +363,6 @@ void run(VM *vm, int size) {
 
                 push(vm, result);
                 aux = vm->memory[vm->pc].opcode;
-                if (aux != 17 && aux != 24) vm->asp--;
                 break;
 
             case 0xFF: // SYSCALL

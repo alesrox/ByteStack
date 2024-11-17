@@ -48,6 +48,8 @@ built_in_funcs = {
     'input' : 2,
     'append': 3,
     'size'  : 4,
+    'remove': 5,
+    'pop'   : 6,
 }
 
 class ByteCodeCompiler:
@@ -129,7 +131,9 @@ class ByteCodeCompiler:
 
                 self.append_bytecode((bytecode_instructions["BUILD_STR"], len(string)))
             elif node.value_type == 'IDENTIFIER':
-                if node.value in self.identifiers:
+                if isinstance(node.value, FunctionCall):
+                    self.add_instruction(node.value, scope)
+                elif node.value in self.identifiers:
                     self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[node.value]))
                 elif node.value in self.locals and scope:
                     self.append_bytecode((bytecode_instructions["LOAD_LOCAL"], self.locals[node.value]))
