@@ -14,6 +14,11 @@ if __name__ == "__main__":
     bytecode_doc = '-d' in sys.argv
     bytecode_doc_bin = '-b' in sys.argv
 
+    if len(sys.argv) > 2 and len(sys.argv[-1]) > 2:
+        output_file_name = sys.argv[-1]
+    else:
+        output_file_name = 'output.bin'
+
     data = file.read()
     lexer.input(data)
     if only_lexer:
@@ -39,7 +44,7 @@ if __name__ == "__main__":
                 file.write(f" {arg}\n")
         exit()
 
-    with open("output.bin", "wb") as file:
+    with open(output_file_name, "wb") as file:
         for opcode, arg in compiler.get_bytecode():
             file.write(opcode.to_bytes(1, byteorder='big'))
 
