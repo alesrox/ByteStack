@@ -78,10 +78,14 @@ void syscall(VM *vm, int arg);
 void sub_print(DataItem item);
 void sup_print(VM* vm, DataItem element);
 
-// Data Utils
+// ALU Core
 uint32_t format_float(float value);
 float extract_float(DataItem item);
 float float_mod(float a, float b);
+int logic_unit(VM* vm, DataItem left, DataItem right, uint8_t op);
+float float_alu(VM* vm, DataItem left, DataItem right, uint8_t op);
+int int_alu(VM* vm, DataItem left, DataItem right, uint8_t op);
+DataItem alu(VM* vm, DataItem left, DataItem right, uint8_t op);
 
 // Arrays Utils
 void create_array(DynamicArray *array, int initial_capacity);
