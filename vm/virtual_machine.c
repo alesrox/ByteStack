@@ -1,5 +1,6 @@
 #include "virtual_machine.h"
 
+int debuging = 0;
 const int STORE_FLOAT_CODE = 0x10;
 char* error_messages[ERR_COUNT] = {
     "Error: Binary file not found",
@@ -27,13 +28,15 @@ int load_program(VM *vm, const char *filename) {
     vm->data_segment.pointer = 0;
     vm->data_segment.capacity = MEMORY_SIZE;
     vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
-    vm->memory = malloc(sizeof(Instruction) * num_instructions);
+    vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
         vm->memory[i].arg.type = (vm->memory[i].opcode == STORE_FLOAT_CODE) ? FLOAT_TYPE : INT_TYPE; 
         fread(&vm->memory[i].arg.value, sizeof(uint32_t), 1, file);
     }
+    // vm->memory[num_instructions].opcode = 0x00;
+    // vm->memory[num_instructions].arg = (DataItem){0, 0};
 
     fclose(file);
 
@@ -51,7 +54,10 @@ void run(VM *vm, int size) {
         DataItem left, right, result;
         int address, index, array_access, aux, length;
 
+        if (debuging) show_vm_state(*vm);
+
         // printf("0x%02X - %d\n", instr.opcode, instr.arg.value);
+        // if (instr.opcode == 0x00) continue;
         if (instr.opcode < 0x0F) {
             right = (instr.opcode != 0x08) ? pop(vm) : (DataItem){0, 0};
             left = pop(vm);
@@ -127,7 +133,8 @@ void run(VM *vm, int size) {
                 break;
             
             case 0x16: // DEL_SCOPE
-                free(vm->frames[vm->fp--].locals.data);
+                free(vm->frames[vm->fp - 1].locals.data);
+                vm->fp--;
                 break;
 
             case 0x17: // CALL
@@ -152,7 +159,7 @@ void run(VM *vm, int size) {
             
             case 0x1A: // RETURN
                 free(vm->frames[vm->fp - 1].locals.data);
-                vm->pc = vm->frames[--vm->fp].return_address;
+                vm->pc = vm->frames[vm->fp - 1].return_address;
                 vm->fp--;
                 break;
 
@@ -217,10 +224,13 @@ void run(VM *vm, int size) {
 
 int main(int argc, char* argv[]) {
     const char* filename = (argc < 2) ? "output.bin" : argv[1];
+    if (argc > 2 && argv[2][0] == '-' && argv[2][1] == 'd' && argv[2][2] == '\0') debuging = 1;
+    if (debuging) printf("Debug mode is ON.");
 
     VM virtual_machine;
     int size = load_program(&virtual_machine, filename);
     run(&virtual_machine, size);
+    if (debuging) { virtual_machine.pc++; show_vm_state(virtual_machine); }
 
     return 0;
 }

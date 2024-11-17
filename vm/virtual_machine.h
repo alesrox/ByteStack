@@ -98,3 +98,6 @@ void remove_last(DynamicArray *array);
 void convert_int_to_str(DynamicArray *arr, uint32_t value);
 void convert_float_to_str(DynamicArray *arr, uint32_t value);
 void convert_list_to_str(VM* vm, DynamicArray* arr, DynamicArray list);
+
+// Debug Tools
+void show_vm_state(VM vm);
