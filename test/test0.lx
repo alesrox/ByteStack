@@ -1,7 +1,8 @@
+print("Enter a number: ");
 let int x = input();
 
-if (x < 0) {
-    print("Negative");
+if (x % 2 == 0) {
+    print("Your number is even");
 } else {
-    print("Positive");
+    print("Your number is odd");
 }

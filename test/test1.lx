@@ -1,8 +1,7 @@
 print("For loop: ");
 for (let int i = 0; i < 4) { print("" + i + ", "); }
-// Error: print(i);
-print("\nWhile Loop: ");
 
+print("\nWhile Loop: ");
 let int x = 0;
 while (x < 4) {
     print("" + x + ", ");

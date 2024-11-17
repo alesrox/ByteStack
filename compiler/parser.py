@@ -127,7 +127,8 @@ class Parser:
             ('AND', 'OR'),
             ('EQ', 'NEQ', 'LT', 'GT', 'LE', 'GE'),
             ('PLUS', 'MINUS'),
-            ('MULTIPLY', 'DIVIDE'),
+            ('MULTIPLY', 'DIVIDE', 'MOD'),
+            ('POW'),
         )
 
         if operator_group == len(operators):

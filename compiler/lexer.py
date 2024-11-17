@@ -2,7 +2,7 @@ import ply.lex as lex
 
 tokens = [
     'NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL',
-    'IDENTIFIER', 'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE',
+    'IDENTIFIER', 'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE', 'MOD', 'POW',
     'LPAREN', 'RPAREN', 'LBRACE', 'RBRACE', 'ASSIGN', 'SEMICOLON',
     'COMMA', 'EQ', 'NEQ', 'LT', 'GT', 'LE', 'GE',
     'START_LIST', 'END_LIST', 'EMPTY_ARR', 'POINT'
@@ -44,6 +44,8 @@ t_PLUS = r'\+'
 t_MINUS = r'-'
 t_MULTIPLY = r'\*'
 t_DIVIDE = r'/'
+t_MOD = r'\%'
+t_POW = r'\^'
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_EMPTY_ARR = r'\[\]'
