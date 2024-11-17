@@ -82,9 +82,9 @@ void sup_print(VM* vm, DataItem element);
 uint32_t format_float(float value);
 float extract_float(DataItem item);
 float float_mod(float a, float b);
-int logic_unit(VM* vm, DataItem left, DataItem right, uint8_t op);
+int logic_unit(VM* vm, uint32_t left, uint32_t right, uint8_t op);
 float float_alu(VM* vm, DataItem left, DataItem right, uint8_t op);
-int int_alu(VM* vm, DataItem left, DataItem right, uint8_t op);
+int int_alu(VM* vm, uint32_t left, uint32_t right, uint8_t op);
 DataItem alu(VM* vm, DataItem left, DataItem right, uint8_t op);
 
 // Arrays Utils
