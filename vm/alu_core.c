@@ -26,30 +26,35 @@ int logic_unit(VM* vm, uint32_t left, uint32_t right, uint8_t op) {
 }
 
 float float_alu(VM* vm, DataItem left, DataItem right, uint8_t op) {
+    float left_float = extract_float(left);
+    float right_float = extract_float(right);
+
     switch (op) {
         case 0x01: // ADD
-            return extract_float(left) + extract_float(right);
+            return left_float + right_float;
         case 0x02: // SUB
-            return extract_float(left) - extract_float(right);
+            return left_float - right_float;
         case 0x03: // MUL
-            return extract_float(left) * extract_float(right);
+            return left_float * right_float;
         case 0x04: // DIV
-            return extract_float(left) / extract_float(right);
+            return left_float / right_float;
         case 0x05: // MOD
-            return float_mod(extract_float(left), extract_float(right));
+            return float_mod(left_float, right_float);
         case 0x09: // EQ
-            return extract_float(left) == extract_float(right);
+            return left_float == right_float;
         case 0x0A: // NEQ
-            return extract_float(left) != extract_float(right);
+            return left_float != right_float;
         case 0x0B: // LT
-            return extract_float(left) < extract_float(right);
+            return left_float < right_float;
         case 0x0C: // GT
-            return extract_float(left) > extract_float(right);
+            return left_float > right_float;
         case 0x0D: // LE
-            return extract_float(left) <= extract_float(right);
+            return left_float <= right_float;
         case 0x0E: // GE
-            return extract_float(left) >= extract_float(right);
+            return left_float >= right_float;
     }
+
+    return 0;
 }
 
 int int_alu(VM* vm, uint32_t left, uint32_t right, uint8_t op) {
@@ -69,14 +74,16 @@ int int_alu(VM* vm, uint32_t left, uint32_t right, uint8_t op) {
         case 0x0A: // NEQ
             return left != right;
         case 0x0B: // LT
-            return left < right;
+            return (int) left < (int) right;
         case 0x0C: // GT
-            return left > right;
+            return (int) left > (int) right;
         case 0x0D: // LE
-            return left <= right;
+            return (int) left <= (int) right;
         case 0x0E: // GE
-            return left >= right;
+            return (int) left >= (int) right;
     }
+
+    return 0;
 }
 
 DataItem alu(VM* vm, DataItem left, DataItem right, uint8_t op) {
@@ -85,7 +92,7 @@ DataItem alu(VM* vm, DataItem left, DataItem right, uint8_t op) {
     result.type = INT_TYPE;
 
     if (op >= 0x06 && op <= 0x08) {
-        result.value = (vm, left.value, right.value, op);
+        result.value = logic_unit(vm, left.value, right.value, op);
     } else if (left.type == FLOAT_TYPE || right.type == FLOAT_TYPE) {
         result.type = FLOAT_TYPE;
         result.value = format_float(float_alu(vm, left, right, op));
