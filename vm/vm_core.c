@@ -96,11 +96,19 @@ void syscall(VM *vm, int arg) {
             append_array(&vm->array_storage[element.value], aux.value);
             break;
         
-        case 4: // (list).size
+        case 4: // (list).size()
             element = pop(vm);
             aux.type = INT_TYPE;
             aux.value = vm->array_storage[element.value].size;
-            push(vm,aux);
+            push(vm, aux);
+            break;
+        
+        case 5: // (list).remove()
+            remove_at(&vm->array_storage[pop(vm).value], pop(vm).value);
+            break;
+
+        case 6: // (list).pop()
+            remove_last(&vm->array_storage[pop(vm).value]);
             break;
     }
 }
