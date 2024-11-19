@@ -1,56 +1,6 @@
+from utils import *
 from syntax_tree import *
 from tools import string_to_list
-
-ByteCode = bytecode_instructions = {
-    "ADD"           : 0x01,
-    "SUB"           : 0x02,
-    "MUL"           : 0x03,
-    "DIV"           : 0x04,
-    "MOD"           : 0x05,
-    "AND"           : 0x06,
-    "OR"            : 0x07,
-    "NOT"           : 0x08,
-    "EQ"            : 0x09,
-    "NEQ"           : 0x0A,
-    "LT"            : 0x0B,
-    "GT"            : 0x0C,
-    "LE"            : 0x0D,
-    "GE"            : 0x0E,
-    "STORE"         : 0x0F,
-    "STORE_FLOAT"   : 0x10,
-    "STORE_MEM"     : 0x11,
-    "LOAD"          : 0x12,
-    "JUMP"          : 0x13,
-    "JUMP_IF"       : 0x14,
-    "CREATE_SCOPE"  : 0x15,
-    "DEL_SCOPE"     : 0x16,
-    "CALL"          : 0x17,
-    "STORE_LOCAL"   : 0x18,
-    "LOAD_LOCAL"    : 0x19,
-    "RETURN"        : 0x1A,
-    "BUILD_LIST"    : 0x1B,
-    "LIST_ACCESS"   : 0x1C,
-    "LIST_SET"      : 0x1D,
-    "BUILD_STR"     : 0x1E,
-    "SYSCALL"       : 0xFF
-}
-
-operations = {
-    '+': "ADD", '-': "SUB", '*': "MUL", '/': "DIV", '%': "MOD",
-    'and': "AND", 'or': "OR", 'not': "NOT",
-    '==': "EQ", '!=': "NEQ", 
-    '<': "LT", '<=': "LE", '>': "GT", '>=': "GE",
-}
-
-built_in_funcs = {
-    'exit'  : 0,    
-    'print' : 1, 
-    'input' : 2,
-    'append': 3,
-    'size'  : 4,
-    'remove': 5,
-    'pop'   : 6,
-}
 
 class ByteCodeCompiler:
     def __init__(self):
@@ -143,33 +93,35 @@ class ByteCodeCompiler:
             self.append_bytecode((bytecode_instructions["CREATE_SCOPE"], 0))
             self.add_instruction(node.condition, True)
             if_instruction = self.length
-            self.append_bytecode((bytecode_instructions["JUMP_IF"]))
+            self.append_bytecode(["To replace IF"])
 
             elif_instructions = []
             for elif_statement in node.elif_statements:
                 self.add_instruction(elif_statement.condition, True)
                 elif_instructions.append(self.length)
-                self.append_bytecode((bytecode_instructions["JUMP_IF"]))
+                self.append_bytecode(["To replace ELIF START"])
             
             if node.else_block:
                 self.generate_bytecode(node.else_block)
-                self.append_bytecode((bytecode_instructions["JUMP"]))
+                self.append_bytecode(["To replace ELSE"])
     
             else_instruction = self.length - 1
             for i in range(len(elif_instructions)):
                 self.generate_bytecode(node.elif_statements[i].true_block)
                 ins = self.length
-                self.bytecode[elif_instructions[i]] = (self.bytecode[elif_instructions[i]], ins)
+                self.bytecode[elif_instructions[i]] = (bytecode_instructions["JUMP_IF"], ins)
                 elif_instructions[i] = self.length
-                self.append_bytecode((bytecode_instructions["JUMP"]))
+                self.append_bytecode(["To replace ELIF END"])
     
-            self.bytecode[if_instruction] = (self.bytecode[if_instruction], self.length)
+            self.bytecode[if_instruction] = (bytecode_instructions["JUMP_IF"], self.length)
             self.generate_bytecode(node.true_block)
             end_if_pos = self.length
-            self.bytecode[else_instruction] = (self.bytecode[else_instruction], end_if_pos)
+            
+            if node.else_block:
+                self.bytecode[else_instruction] = (bytecode_instructions["JUMP"], end_if_pos)
 
             for elif_instruction in elif_instructions:
-                self.bytecode[elif_instruction] = (self.bytecode[elif_instruction], end_if_pos)
+                self.bytecode[elif_instruction] = (bytecode_instructions["JUMP"], end_if_pos)
             
             self.append_bytecode((bytecode_instructions["DEL_SCOPE"], 0))
             self.locals.clear()
@@ -232,7 +184,14 @@ class ByteCodeCompiler:
                     self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[node.from_obj]))
             
             if node.identifier in built_in_funcs:
-                self.append_bytecode((bytecode_instructions["SYSCALL"], built_in_funcs[node.identifier]))
+                opcode = bytecode_instructions["SYSCALL"]
+                in_funcs = built_in_funcs
+            else:
+                opcode = bytecode_instructions["OBJCALL"]
+                in_funcs = built_in_obj_funcs
+
+            if node.identifier in in_funcs:
+                self.append_bytecode((opcode, in_funcs[node.identifier]))
             else:
                 self.append_bytecode((bytecode_instructions["CALL"], self.identifiers[node.identifier] + 1))
         elif isinstance(node, list):

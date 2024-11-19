@@ -75,8 +75,6 @@ DataItem pop(VM *vm);
 void push(VM *vm, DataItem value);
 void store_data(DataSegment *ds, int address, DataItem item);
 void syscall(VM *vm, int arg);
-void sub_print(DataItem item);
-void sup_print(VM* vm, DataItem element);
 
 // ALU Core
 uint32_t format_float(float value);
@@ -93,6 +91,7 @@ void resize_array(DynamicArray *array, int new_capacity);
 void append_array(DynamicArray *array, uint32_t value);
 void remove_at(DynamicArray* array, int index);
 void remove_last(DynamicArray *array);
+void objcall(VM *vm, int arg);
 
 // Stings Utils
 void convert_int_to_str(DynamicArray *arr, uint32_t value);
