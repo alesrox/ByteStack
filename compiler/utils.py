@@ -46,6 +46,8 @@ built_in_funcs = {
     'input' : 2,
     'getf'  : 3,
     'scan'  : 4,
+    'read'  : 5,
+    'write' : 6,
 }
 
 built_in_obj_funcs = {

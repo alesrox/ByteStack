@@ -97,10 +97,10 @@ class Parser:
                 literal_type, value = self.current_token.type, self.current_token.value
                 self.next_token()
                 return Expression(literal_type, value)
-            elif self.current_token.type == 'IDENTIFIER' and token.type == 'LPAREN':
-                token = self.current_token
-                self.next_token()
-                return self.function_call(token.value)
+            # elif self.current_token.type == 'IDENTIFIER' and token.type == 'LPAREN':
+            #     token = self.current_token
+            #     self.next_token()
+            #     return self.function_call(token.value)
             elif self.current_token.type == 'IDENTIFIER' and token.type == 'START_LIST':
                 token = self.current_token
                 self.next_token() # Consume VAR_NAME_INFO
@@ -157,6 +157,8 @@ class Parser:
                 func_id = self.current_token.value
                 self.next_token() # Consume FUNC_NAME_TYPE
                 identifier = self.function_call(func_id, identifier)
+            elif self.current_token.type == 'LPAREN':
+                identifier = self.function_call(identifier)
             
             return Expression('IDENTIFIER', identifier)
 
