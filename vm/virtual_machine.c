@@ -178,7 +178,6 @@ void run(VM *vm, int size) {
                 }
 
                 push(vm, result);
-                aux = vm->memory[vm->pc].opcode;
                 break;
             
             case 0x1C: // LIST_ACCESS
@@ -212,7 +211,10 @@ void run(VM *vm, int size) {
                 }
 
                 push(vm, result);
-                aux = vm->memory[vm->pc].opcode;
+                break;
+
+            case 0xFE: // OBJCALL
+                objcall(vm, instr.arg.value);
                 break;
 
             case 0xFF: // SYSCALL
