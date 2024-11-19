@@ -3,4 +3,4 @@ func add(int a, int b) {
 }
 
 let int x = add(1, 2);
-print(x);
+print("add(1, 2) = " + x);
