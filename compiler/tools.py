@@ -41,7 +41,13 @@ def string_to_list(string: str) -> list:
     string = string.replace('\\n', '\n')
     string = string.replace('\\t', '\t')
 
-    for char in string:
-        list_from_string.append(ord(char))
+    string += '\0' * (-len(string) % 4)
+
+    for i in range(0, len(string), 4):
+        block = string[i:i + 4]
+        packed = 0
+        for j, char in enumerate(block):
+            packed |= ord(char) << (24 - j * 8)
+        list_from_string.append(packed)
 
     return list_from_string
