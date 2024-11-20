@@ -3,12 +3,15 @@
 int debuging = 0;
 const int STORE_FLOAT_CODE = 0x10;
 char* error_messages[ERR_COUNT] = {
-    "Error: Binary file not found",
+    "Error: File not found",
     "Error: Maximum recursion depth exceeded",
     "Error: Memory access out of bounds",
     "Error: Attempted to access an empty stack",
     "Error: Tried to store incorrect type on a array",
     "Error: Index out of bounds",
+    "Error: Failed to open file, please check permissions",
+    "Error: Attempted to write a complex structure in an unsupported format",
+    "Error: Attempted to write a complex structure to a binary file, which is not allowed",
 };
 
 void throw_error(char* msg) {
@@ -32,7 +35,7 @@ int load_program(VM *vm, const char *filename) {
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
-        vm->memory[i].arg.type = (vm->memory[i].opcode == STORE_FLOAT_CODE) ? FLOAT_TYPE : INT_TYPE; 
+        vm->memory[i].arg.type = UNASSIGNED_TYPE; 
         fread(&vm->memory[i].arg.value, sizeof(uint32_t), 1, file);
     }
     // vm->memory[num_instructions].opcode = 0x00;
@@ -63,7 +66,7 @@ void run(VM *vm, int size) {
             left = pop(vm);
 
             // Only ints or floats
-            if (right.type + left.type <= 2) {
+            if (right.type < 3 && left.type < 3) {
                 result = alu(vm, left, right, instr.opcode);
                 push(vm, result);
                 continue;
@@ -99,15 +102,18 @@ void run(VM *vm, int size) {
                 break;
 
             case 0x0F: // STORE
+                instr.arg.type = INT_TYPE;
                 push(vm, instr.arg);
                 break;
 
             case 0x10: // STORE_FLOAT
+                instr.arg.type = FLOAT_TYPE;
                 push(vm, instr.arg);
                 break;
 
             case 0x11: // STORE_MEM
-                store_data(&vm->data_segment, instr.arg.value, pop(vm));
+                result = pop(vm);
+                store_data(&vm->data_segment, instr.arg.value, result);
                 break;
 
             case 0x12: // LOAD
@@ -211,6 +217,11 @@ void run(VM *vm, int size) {
                 }
 
                 push(vm, result);
+                break;
+            
+            case 0x1F:
+                instr.arg.type = CHAR_TYPE;
+                push(vm, instr.arg);
                 break;
 
             case 0xFE: // OBJCALL
