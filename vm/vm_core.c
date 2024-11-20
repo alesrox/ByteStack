@@ -36,12 +36,15 @@ void built_in_exit(VM *vm) { exit(EXIT_SUCCESS); }
 void built_in_subprint(DataItem item, FILE *out) {
     if (item.type == INT_TYPE) {
         fprintf(out, "%d", (int)item.value);
-    }
-    else if (item.type == FLOAT_TYPE) {
+    } else if (item.type == FLOAT_TYPE) {
         fprintf(out, "%g", extract_float(item));
-    }
-    else if (item.type == CHAR_TYPE) {
-        fprintf(out, "%c", (char)item.value);
+    } else if (item.type == CHAR_TYPE) {
+        uint32_t data = item.value;
+        for (int i = 0; i < 4; i++) {
+            char ch = (data >> (8 * (3 - i))) & 0xFF;
+            if (ch == '\0') break;
+            fprintf(out, "%c", ch);
+        }
     }
 }
 
@@ -52,16 +55,13 @@ void built_in_print(VM *vm) {
         DynamicArray arr = vm->array_storage[element.value];
 
         if (arr.type == CHAR_TYPE) {
-            for (int i = 0; i < arr.size; i++)
-            {
+            for (int i = 0; i < arr.size; i++) {
                 DataItem item = {arr.type, arr.items[i]};
                 built_in_subprint(item, stdout);
             }
-        }
-        else if (arr.type == ARRAY_TYPE) {
+        } else if (arr.type == ARRAY_TYPE) {
             printf("[");
-            for (int i = 0; i < arr.size; i++)
-            {
+            for (int i = 0; i < arr.size; i++) {
                 DataItem item = {arr.type, arr.items[i]};
                 push(vm, item);
                 built_in_print(vm);
@@ -69,12 +69,9 @@ void built_in_print(VM *vm) {
                     printf(", ");
             }
             printf("]");
-        }
-        else
-        {
+        } else {
             printf("[");
-            for (int i = 0; i < arr.size; i++)
-            {
+            for (int i = 0; i < arr.size; i++) {
                 DataItem item = {arr.type, arr.items[i]};
                 built_in_subprint(item, stdout);
                 if (i != arr.size - 1)
@@ -82,9 +79,7 @@ void built_in_print(VM *vm) {
             }
             printf("]");
         }
-    }
-    else
-    {
+    } else {
         built_in_subprint(element, stdout);
     }
 }
@@ -118,17 +113,6 @@ void str_type(VM* vm, DynamicArray* arr, DataItem item) {
     }
 } 
 
-void built_in_type(VM *vm) {
-    DataItem arg = pop(vm);
-    DataItem type = {ARRAY_TYPE, vm->asp++};
-    create_array(&vm->array_storage[type.value], 4);
-    vm->array_storage[type.value].type = CHAR_TYPE;
-
-    str_type(vm, &vm->array_storage[type.value], arg);
-    push(vm, type);
-
-}
-
 void built_in_scan(VM *vm) {
     DataItem input = {ARRAY_TYPE, vm->asp++};
     char input_str[2048];
@@ -143,6 +127,17 @@ void built_in_scan(VM *vm) {
     push(vm, input);
 }
 
+void built_in_type(VM *vm) {
+    DataItem arg = pop(vm);
+    DataItem type = {ARRAY_TYPE, vm->asp++};
+    create_array(&vm->array_storage[type.value], 4);
+    vm->array_storage[type.value].type = CHAR_TYPE;
+
+    str_type(vm, &vm->array_storage[type.value], arg);
+    push(vm, type);
+
+}
+
 void built_in_read(VM *vm) {
     FILE *file;
     int start, end, binary;
@@ -155,24 +150,24 @@ void built_in_read(VM *vm) {
     DataItem read_result = {ARRAY_TYPE, vm->asp++};
     create_array(&vm->array_storage[read_result.value], 4);
 
-    char filename[file_arr.size + 1];
+    int index = 0;
+    char filename[file_arr.size * 4 + 1];
     for (int i = 0; i < file_arr.size; i++)
-        filename[i] = (char)file_arr.items[i];
-    filename[file_arr.size] = '\0';
+        for (int j = 0; j < 4; j++)
+            filename[index++] = (file_arr.items[i] >> (8 * (3 - j))) & 0xFF;
+    
+    filename[file_arr.size * 4] = '\0';
 
     file = fopen(filename, (binary) ? "rb" : "r");
-    if (file == NULL)
-        throw_error(error_messages[ERR_FILE_NOT_FOUND]);
+    if (file == NULL) throw_error(error_messages[ERR_FILE_NOT_FOUND]);
 
     int i = start;
     fseek(file, 0, SEEK_END);
     file_length = ftell(file);
     if (binary > 0) {
         uint32_t aux;
-        if (binary > 4)
-            binary = 4;
-        if (end < 0)
-            end = file_length - (end + 1) * sizeof(uint8_t) * binary;
+        if (binary > 4) binary = 4;
+        if (end < 0) end = file_length - (end + 1) * sizeof(uint8_t) * binary;
         fseek(file, start * sizeof(uint8_t) * binary, SEEK_SET);
 
         vm->array_storage[read_result.value].type = INT_TYPE;
@@ -180,19 +175,24 @@ void built_in_read(VM *vm) {
             append_array(&vm->array_storage[read_result.value], aux);
             i++;
         }
-    }
-    else
-    {
+    } else {
         char c;
-        if (end < 0)
-            end = file_length - (end + 1);
+        if (end < 0) end = file_length - (end + 1);
         fseek(file, start, SEEK_SET);
 
         vm->array_storage[read_result.value].type = CHAR_TYPE;
+        int shift = 24; uint32_t temp = 0;
         while ((c = fgetc(file)) != EOF && i < end) {
-            append_array(&vm->array_storage[read_result.value], (uint32_t)((int)c));
-            i++;
+            temp |= ((uint32_t)(unsigned char)c) << shift;
+            shift -= 8; i++;
+
+            if (shift < 0 || i == end) {
+                append_array(&vm->array_storage[read_result.value], temp);
+                temp = 0; shift = 24;
+            }
         }
+
+        if (shift != 24) append_array(&vm->array_storage[read_result.value], temp);
     }
 
     push(vm, read_result);
@@ -210,21 +210,20 @@ void built_in_write(VM *vm) {
     start = pop(vm).value;
     DynamicArray file_arr = vm->array_storage[pop(vm).value];
 
-    char filename[file_arr.size + 1];
+    int index = 0;
+    char filename[file_arr.size * 4 + 1];
     for (int i = 0; i < file_arr.size; i++)
-        filename[i] = (char)file_arr.items[i];
-    filename[file_arr.size] = '\0';
+        for (int j = 0; j < 4; j++)
+            filename[index++] = (file_arr.items[i] >> (8 * (3 - j))) & 0xFF;
+    
+    filename[file_arr.size * 4] = '\0';
 
-    if (binary == 0)
-        file = fopen(filename, "r+");
-    else if (binary == 1)
-        file = fopen(filename, "r+b");
-    else if (binary == 2)
-        file = fopen(filename, "wb");
-    else
-    {
-        file = fopen(filename, "w");
+    if (binary == 0) file = fopen(filename, "r+");
+    else if (binary == 1) file = fopen(filename, "r+b");
+    else if (binary == 2) file = fopen(filename, "wb");
+    else {
         binary = 0;
+        file = fopen(filename, "w");
     }
 
     if (file == NULL)
@@ -242,40 +241,25 @@ void built_in_write(VM *vm) {
 
         if (to_write.type < ARRAY_TYPE) {
             fwrite(&to_write.value, sizeof(uint32_t), 1, file);
-        }
-        else
-        {
+        } else {
             DynamicArray arr = vm->array_storage[to_write.value];
-            for (int i = 0; i < arr.size; i++)
-            {
-                if (arr.type == CHAR_TYPE)
-                    fwrite(&to_write.value, sizeof(uint8_t), 1, file);
-                else if (arr.type < CHAR_TYPE)
-                    fwrite(&to_write.value, sizeof(uint32_t), 1, file);
-                else
-                    throw_error(error_messages[ERR_WRITING_BINARY]);
+            for (int i = 0; i < arr.size; i++) {
+                if (arr.type == CHAR_TYPE) fwrite(&to_write.value, sizeof(uint8_t), 1, file);
+                else if (arr.type < CHAR_TYPE) fwrite(&to_write.value, sizeof(uint32_t), 1, file);
+                else throw_error(error_messages[ERR_WRITING_BINARY]);
             }
         }
-    }
-    else
-    {
-        if (start < file_length)
-            fseek(file, start, SEEK_SET);
-        if (start < 0)
-            fseek(file, (-1 * start) - 1, SEEK_END);
+    } else {
+        if (start < file_length) fseek(file, start, SEEK_SET);
+        if (start < 0) fseek(file, (-1 * start) - 1, SEEK_END);
 
         if (to_write.type < CHAR_TYPE) {
             built_in_subprint(to_write, file);
-        }
-        else
-        {
+        } else {
             DynamicArray arr = vm->array_storage[to_write.value];
-            for (int i = 0; i < arr.size; i++)
-            {
-                if (arr.type <= CHAR_TYPE)
-                    built_in_subprint((DataItem){arr.type, arr.items[i]}, file);
-                else
-                    throw_error(error_messages[ERR_WRITING_FILE]);
+            for (int i = 0; i < arr.size; i++) {
+                if (arr.type <= CHAR_TYPE) built_in_subprint((DataItem){arr.type, arr.items[i]}, file);
+                else throw_error(error_messages[ERR_WRITING_FILE]);
             }
         }
     }
@@ -295,8 +279,6 @@ void (*builtins[])(VM *vm) = {
 };
 
 void syscall(VM *vm, int arg) {
-    if (arg > -1 && arg < 8)
-        builtins[arg](vm);
-    else
-        printf("Unknown syscall: %d\n", arg);
+    if (arg > -1 && arg < 8) builtins[arg](vm);
+    else printf("Unknown syscall: %d\n", arg);
 }

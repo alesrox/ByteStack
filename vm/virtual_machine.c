@@ -219,7 +219,7 @@ void run(VM *vm, int size) {
                 push(vm, result);
                 break;
             
-            case 0x1F:
+            case 0x1F: // STORE_CHAR
                 instr.arg.type = CHAR_TYPE;
                 push(vm, instr.arg);
                 break;
