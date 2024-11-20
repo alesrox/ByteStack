@@ -101,28 +101,30 @@ void built_in_getf(VM *vm) {
     push(vm, (DataItem){FLOAT_TYPE, format_float(aux)});
 }
 
-void str_type(DynamicArray* arr, int type) {
+void str_type(VM* vm, DynamicArray* arr, DataItem item) {
     char* get_type[ARRAY_TYPE + 1] = {
-        "UNSIGNED", "INT", "FLOAT",
+        "UNASSIGNED", "INT", "FLOAT",
         "CHAR", "ARRAY"
     };
+
+    DataType type = item.type;
 
     for (int i = 0; get_type[type][i] != '\0'; i++)
         append_array(arr, get_type[type][i]);
 
     if (type == ARRAY_TYPE) {
         append_array(arr, 95);
-        str_type(arr, arr->type);
+        str_type(vm, arr, (DataItem){vm->array_storage[item.value].type, 0});
     }
 } 
 
 void built_in_type(VM *vm) {
-    DataType arg_type = pop(vm).type;
+    DataItem arg = pop(vm);
     DataItem type = {ARRAY_TYPE, vm->asp++};
     create_array(&vm->array_storage[type.value], 4);
     vm->array_storage[type.value].type = CHAR_TYPE;
 
-    str_type(&vm->array_storage[type.value], arg_type);
+    str_type(vm, &vm->array_storage[type.value], arg);
     push(vm, type);
 
 }
