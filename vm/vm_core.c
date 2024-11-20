@@ -104,11 +104,20 @@ void str_type(VM* vm, DynamicArray* arr, DataItem item) {
 
     DataType type = item.type;
 
-    for (int i = 0; get_type[type][i] != '\0'; i++)
-        append_array(arr, get_type[type][i]);
+    uint32_t temp = 0; int shift = 24;
+    for (int i = 0; get_type[type][i] != '\0'; i++) {
+        temp |= ((uint32_t)(unsigned char)get_type[type][i]) << shift;
+        shift -= 8;
 
+        if (shift < 0) {
+            append_array(arr, temp);
+            temp = 0; shift = 24;
+        }
+    }
+
+    if (shift != 24) append_array(arr, temp);
     if (type == ARRAY_TYPE) {
-        append_array(arr, 95);
+        append_array(arr, 95 << 24);
         str_type(vm, arr, (DataItem){vm->array_storage[item.value].type, 0});
     }
 } 

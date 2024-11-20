@@ -47,7 +47,7 @@ void convert_int_to_str(DynamicArray *arr, uint32_t integer) {
     int digits[10], digit_count = 0;
 
     if (value < 0) {
-        append_array(arr, 45); // -
+        append_array(arr, 45 << 24); // -
         value = -value;
     }
 
@@ -57,8 +57,18 @@ void convert_int_to_str(DynamicArray *arr, uint32_t integer) {
     } while (value > 0);
 
 
-    for (int i = digit_count - 1; i >= 0; i--)
-        append_array(arr, 48 + digits[i]);
+    uint32_t temp = 0; int shift = 24;
+    for (int i = digit_count - 1; i >= 0; i--) {
+        temp |= ((uint32_t)(48 + digits[i])) << shift;
+        shift -= 8;
+
+        if (shift < 0) {
+            append_array(arr, temp);
+            temp = 0; shift = 24;
+        }
+    }
+
+    if (shift != 24) append_array(arr, temp);
 }
 
 void convert_float_to_str(DynamicArray *arr, uint32_t float_num) {
@@ -66,7 +76,7 @@ void convert_float_to_str(DynamicArray *arr, uint32_t float_num) {
     float value = extract_float(aux);
 
     if (value < 0) {
-        append_array(arr, 45); // -
+        append_array(arr, 45 << 24); // -
         value = -value;
     }
 
@@ -76,29 +86,38 @@ void convert_float_to_str(DynamicArray *arr, uint32_t float_num) {
     convert_int_to_str(arr, integer_part);
 
     if (fractional_part > 0) {
-        append_array(arr, 46); // .
+        append_array(arr, 46 << 24); // .
         // Limit to 6 decimals
-        for (int i = 0; i < 8 && fractional_part > 0.0001; i++) { 
+        uint32_t temp = 0; int shift = 24;
+        for (int i = 0; i < 8 && fractional_part > 0.0001; i++) {
             fractional_part *= 10;
             int digit = (int) fractional_part;
-            append_array(arr, 48 + digit);
+            temp |= ((uint32_t)(48 + digit)) << shift;
+            shift -= 8;
+
+            if (shift < 0) {
+                append_array(arr, temp);
+                temp = 0; shift = 24;
+            }
             fractional_part -= digit;
         }
+
+        if (shift != 24) append_array(arr, temp);
     }
 }
 
 void convert_list_to_str(VM* vm, DynamicArray* arr, DynamicArray list) {
-    append_array(arr, (uint32_t) '[');
+    append_array(arr, ((uint32_t) '[') << 24);
 
     void (*convert_func)(DynamicArray*, uint32_t);
     convert_func = (list.type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
 
     for (int i = 0; i < list.size; i++) {
         (list.type == ARRAY_TYPE) ? convert_list_to_str(vm, arr, vm->array_storage[list.items[i]]) : convert_func(arr, list.items[i]);
-        if (i != list.size - 1) append_array(arr, (uint32_t) ',');
+        if (i != list.size - 1) append_array(arr, ((uint32_t) ',') << 24);
     }
 
-    append_array(arr, (uint32_t) ']');
+    append_array(arr, ((uint32_t) ']') << 24);
 }
 
 void list_append(VM* vm, DataItem obj) {
@@ -139,13 +158,34 @@ void list_slice(VM* vm, DataItem obj) {
     DynamicArray arr = vm->array_storage[obj.value];
     DataItem sliced_arr = {ARRAY_TYPE, vm->asp++};
 
-    if (from < 0 || from > arr.size || to < 0 || to > arr.size)
+    int size = (arr.type == CHAR_TYPE) ? arr.size * 4 : arr.size;
+
+    if (from < 0 || from > size || to < 0 || to > size)
         throw_error(error_messages[ERR_OUT_OF_BOUNDS]);
 
     create_array(&vm->array_storage[sliced_arr.value], 4);
     vm->array_storage[sliced_arr.value].type = arr.type;
-    for (int i = from; i < to; i++)
-        append_array(&vm->array_storage[sliced_arr.value], arr.items[i]);
+    if (arr.type == CHAR_TYPE) {
+        uint32_t current_value = 0; int char_count = 0;
+        for (int i = from; i < to; i++) {
+            int current_uint32_index = i / 4;
+            int char_index_in_uint32 = i % 4;
+            uint32_t value = arr.items[current_uint32_index];
+            uint8_t char_value = (value >> (8 * (3 - char_index_in_uint32))) & 0xFF;
+            current_value |= (char_value << (8 * (3 - char_count)));
+            char_count++;
+
+            if (char_count == 4) {
+                append_array(&vm->array_storage[sliced_arr.value], current_value);
+                current_value = 0; char_count = 0;
+            }
+        }
+
+        if (char_count > 0) append_array(&vm->array_storage[sliced_arr.value], current_value);
+    } else {
+        for (int i = from; i < to; i++)
+            append_array(&vm->array_storage[sliced_arr.value], arr.items[i]);
+    }
 
     push(vm, sliced_arr);
 }
@@ -182,28 +222,6 @@ void list_max(VM* vm, DataItem obj) {
     push(vm, (DataItem){arr.type, max});
 }
 
-void list_lower(VM* vm, DataItem obj) {
-    if (vm->array_storage[obj.value].type != CHAR_TYPE) {
-        push(vm, obj);
-        return;
-    }
-
-    DataItem arr = {ARRAY_TYPE, vm->asp++};
-    create_array(&vm->array_storage[arr.value], 4);
-    vm->array_storage[arr.value].type = CHAR_TYPE;
-
-    for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
-        int value = (int) vm->array_storage[obj.value].items[i];
-        
-        if (value > 96 && value < 123)
-            append_array(&vm->array_storage[arr.value], value - 32);
-        else
-            append_array(&vm->array_storage[arr.value], value);
-    }
-
-    push(vm, arr);
-}
-
 void list_upper(VM* vm, DataItem obj) {
     if (vm->array_storage[obj.value].type != CHAR_TYPE) {
         push(vm, obj);
@@ -215,12 +233,36 @@ void list_upper(VM* vm, DataItem obj) {
     vm->array_storage[arr.value].type = CHAR_TYPE;
 
     for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
-        int value = (int) vm->array_storage[obj.value].items[i];
-        
-        if (value > 64 && value < 91)
-            append_array(&vm->array_storage[arr.value], value + 32);
-        else
-            append_array(&vm->array_storage[arr.value], value);
+        uint32_t value = vm->array_storage[obj.value].items[i];
+        for (int j = 0; j < 4; j++) {
+            uint8_t char_value = (value >> (8 * (3 - j))) & 0xFF;
+            if (char_value >= 'a' && char_value <= 'z') char_value -= 32;
+            value = (value & ~(0xFF << (8 * (3 - j)))) | (char_value << (8 * (3 - j)));
+        }
+        append_array(&vm->array_storage[arr.value], value);
+    }
+
+    push(vm, arr);
+}
+
+void list_lower(VM* vm, DataItem obj) {
+    if (vm->array_storage[obj.value].type != CHAR_TYPE) {
+        push(vm, obj);
+        return;
+    }
+
+    DataItem arr = {ARRAY_TYPE, vm->asp++};
+    create_array(&vm->array_storage[arr.value], 4);
+    vm->array_storage[arr.value].type = CHAR_TYPE;
+
+    for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
+        uint32_t value = vm->array_storage[obj.value].items[i];
+        for (int j = 0; j < 4; j++) {
+            uint8_t char_value = (value >> (8 * (3 - j))) & 0xFF;
+            if (char_value >= 'A' && char_value <= 'Z') char_value += 32;
+            value = (value & ~(0xFF << (8 * (3 - j)))) | (char_value << (8 * (3 - j)));
+        }
+        append_array(&vm->array_storage[arr.value], value);
     }
 
     push(vm, arr);
