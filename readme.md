@@ -37,7 +37,6 @@ The compiler supports several flags for debugging and output customization:
 * -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
 
 ## Future features to add
-- R/W File functions
 - System control functions
 - Multi-file scripts (like import statement from python or java, or #include from C/C++/C#)
 - Trash collector for the Virtual Machine

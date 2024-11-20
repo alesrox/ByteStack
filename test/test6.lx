@@ -1,0 +1,5 @@
+let string file = "test/test.txt";
+
+write(file, 0, "Hello World!", -1);
+print(read(file, 0, false, 5)); // Hello
+print(read(file, 6, false, -1)); // World!
