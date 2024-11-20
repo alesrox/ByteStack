@@ -96,11 +96,7 @@ class Parser:
             if token.type in ('SEMICOLON', 'COMMA', 'END_LIST', 'RPAREN'):
                 literal_type, value = self.current_token.type, self.current_token.value
                 self.next_token()
-                return Expression(literal_type, value)
-            # elif self.current_token.type == 'IDENTIFIER' and token.type == 'LPAREN':
-            #     token = self.current_token
-            #     self.next_token()
-            #     return self.function_call(token.value)
+                return Expression(literal_type,  value)
             elif self.current_token.type == 'IDENTIFIER' and token.type == 'START_LIST':
                 token = self.current_token
                 self.next_token() # Consume VAR_NAME_INFO
@@ -177,6 +173,13 @@ class Parser:
         
         identifier = self.current_token.value
         self.next_token() # Consume VAR_NAME_INFO
+
+        if self.current_token.type == 'SEMICOLON':
+            self.next_token()
+            value = [] if ('[]' in var_type) else (0 if var_type != "string" else "")
+            value_type = "[]" if ('[]' in var_type) else ("NUMBER" if var_type != "string" else "STRING_LITERAL")
+            expression = Expression(value_type, value) if ('[]' not in var_type) else []
+            return Declaration(var_type, identifier, expression)
 
         if self.current_token.type != 'ASSIGN':
             self.throw_error("Expected an equal symbol")

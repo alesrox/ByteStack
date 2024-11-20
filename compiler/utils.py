@@ -29,6 +29,7 @@ bytecode_instructions = {
     "LIST_ACCESS"   : 0x1C,
     "LIST_SET"      : 0x1D,
     "BUILD_STR"     : 0x1E,
+    "STORE_CHAR"    : 0x1F,
     "OBJCALL"       : 0xFE,
     "SYSCALL"       : 0xFF
 }
@@ -45,9 +46,10 @@ built_in_funcs = {
     'print' : 1, 
     'input' : 2,
     'getf'  : 3,
-    'scan'  : 4,
-    'read'  : 5,
-    'write' : 6,
+    'type'  : 4,
+    'scan'  : 5,
+    'read'  : 6,
+    'write' : 7,
 }
 
 built_in_obj_funcs = {

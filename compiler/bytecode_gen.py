@@ -77,7 +77,7 @@ class ByteCodeCompiler:
             elif node.value_type == 'STRING_LITERAL':
                 string = string_to_list(node.value)
                 for char in string[::-1]:
-                    self.append_bytecode((bytecode_instructions["STORE"], char))
+                    self.append_bytecode((bytecode_instructions["STORE_CHAR"], char))
 
                 self.append_bytecode((bytecode_instructions["BUILD_STR"], len(string)))
             elif node.value_type == 'IDENTIFIER':
