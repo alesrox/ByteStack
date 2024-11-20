@@ -1,7 +1,7 @@
 #include "virtual_machine.h"
 
 char* get_type[ARRAY_TYPE + 1] = {
-    "UNSIGNED", "INT", "FLOAT",
+    "UNASSIGNED", "INT", "FLOAT",
     "CHAR", "ARRAY"
 };
 
