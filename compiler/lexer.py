@@ -30,8 +30,8 @@ keywords = {
     'float'     : 'FLOAT',
     'bool'      : 'BOOL',
     'string'    : 'STRING',
-    'True'      : 'TRUE',
-    'False'     : 'FALSE',
+    'true'      : 'TRUE',
+    'false'     : 'FALSE',
     'and'       : 'AND',
     'or'        : 'OR',
     'not'       : 'NOT',
@@ -81,8 +81,8 @@ def t_STRING_LITERAL(t):
     return t
 
 def t_BOOL_LITERAL(t):
-    r'\b(True|False)\b'
-    t.value = True if t.value == 'True' else False
+    r'\b(true|false)\b'
+    t.value = True if t.value == 'true' else False
     return t
 
 def t_comment_singleline(t):
