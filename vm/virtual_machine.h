@@ -11,7 +11,7 @@ typedef enum {
     ERR_RECURSION_LIMIT,
     ERR_MEMORY_OUT_OF_BOUNDS,
     ERR_EMPTY_STACK,
-    ERR_BAD_TYPE_ARR,
+    ERR_BAD_TYPE,
     ERR_OUT_OF_BOUNDS,
     ERR_OPENING_FILE,
     ERR_WRITING_FILE,
@@ -77,7 +77,8 @@ void run(VM *vm, int size);
 // VM Core
 DataItem pop(VM *vm);
 void push(VM *vm, DataItem value);
-void store_data(DataSegment *ds, int address, DataItem item);
+void store_data(VM* vm, DataSegment *ds, int address, DataItem item);
+void built_in_subprint(DataItem item, FILE *out);
 void syscall(VM *vm, int arg);
 
 // ALU Core
@@ -90,6 +91,7 @@ int int_alu(VM *vm, uint32_t left, uint32_t right, uint8_t op);
 DataItem alu(VM *vm, DataItem left, DataItem right, uint8_t op);
 
 // Arrays Utils
+void array_assigment(VM* vm, int address, int item);
 void create_array(DynamicArray *array, int initial_capacity);
 void resize_array(DynamicArray *array, int new_capacity);
 void append_array(DynamicArray *array, uint32_t value);

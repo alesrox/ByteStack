@@ -1,9 +1,23 @@
 #include "virtual_machine.h"
 
+void array_assigment(VM* vm, int address, int item) {
+    int arr_addres_type = vm->array_storage[address].type == ARRAY_TYPE;
+    int arr_item_type = vm->array_storage[item].type == ARRAY_TYPE;
+
+    if (arr_addres_type && arr_item_type) 
+        array_assigment(vm, vm->array_storage[address].items[0], vm->array_storage[item].items[0]);
+    else if (arr_addres_type + arr_item_type == 0 || arr_item_type) 
+        if (vm->array_storage[address].type == UNASSIGNED_TYPE) vm->array_storage[item].type = INT_TYPE;
+        else vm->array_storage[item].type = vm->array_storage[address].type;
+    else if (arr_addres_type) 
+        throw_error(error_messages[ERR_BAD_TYPE]);
+}
+
 void create_array(DynamicArray *array, int initial_capacity) {
     array->items = malloc(initial_capacity * sizeof(uint32_t));
-    array->size = 0;
     array->capacity = initial_capacity;
+    array->type = UNASSIGNED_TYPE;
+    array->size = 0;
 }
 
 void resize_array(DynamicArray *array, int new_capacity) {
@@ -14,6 +28,7 @@ void resize_array(DynamicArray *array, int new_capacity) {
 void append_array(DynamicArray *array, uint32_t value) {
     if (array->size == array->capacity)
         resize_array(array, array->capacity * 2);
+
     array->items[array->size++] = value;
 }
 
@@ -123,8 +138,10 @@ void convert_list_to_str(VM* vm, DynamicArray* arr, DynamicArray list) {
 void list_append(VM* vm, DataItem obj) {
     DataItem aux = pop(vm);
 
-    if (vm->array_storage[obj.value].type != aux.type)
-        throw_error(error_messages[ERR_BAD_TYPE_ARR]);
+    if (vm->array_storage[obj.value].type == UNASSIGNED_TYPE)
+        vm->array_storage[obj.value].type = aux.type;
+    else if (vm->array_storage[obj.value].type != aux.type)
+        throw_error(error_messages[ERR_BAD_TYPE]);
 
     append_array(&vm->array_storage[obj.value], aux.value);
 }
