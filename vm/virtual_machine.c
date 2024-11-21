@@ -1,17 +1,16 @@
 #include "virtual_machine.h"
 
 int debuging = 0;
-const int STORE_FLOAT_CODE = 0x10;
 char* error_messages[ERR_COUNT] = {
-    "Error: File not found",
-    "Error: Maximum recursion depth exceeded",
-    "Error: Memory access out of bounds",
-    "Error: Attempted to access an empty stack",
-    "Error: Tried to store incorrect type on a array",
-    "Error: Index out of bounds",
-    "Error: Failed to open file, please check permissions",
-    "Error: Attempted to write a complex structure in an unsupported format",
-    "Error: Attempted to write a complex structure to a binary file, which is not allowed",
+    "File not found",
+    "Maximum recursion depth exceeded",
+    "Memory access out of bounds",
+    "Attempted to access an empty stack",
+    "Tried to store incorrect type, casting not possible",
+    "Index out of bounds",
+    "Failed to open file, please check permissions",
+    "Attempted to write a complex structure in an unsupported format",
+    "Attempted to write a complex structure to a binary file, which is not allowed",
 };
 
 void throw_error(char* msg) {
@@ -79,6 +78,17 @@ void run(VM *vm, int size) {
                     DynamicArray arr = vm->array_storage[right.value];
                     if (vm->array_storage[left.value].type == CHAR_TYPE && arr.type != CHAR_TYPE) {
                         convert_list_to_str(vm, &vm->array_storage[left.value], arr);
+                    } else if (arr.type == CHAR_TYPE && vm->array_storage[left.value].type != CHAR_TYPE) {
+                        uint32_t *items = arr.items;
+                        int old_size = arr.size;
+                        create_array(&vm->array_storage[right.value], 4);
+                        vm->array_storage[right.value].type = CHAR_TYPE;
+                        convert_list_to_str(vm, &vm->array_storage[right.value], vm->array_storage[left.value]);
+
+                        for (int i = 0; i < old_size; i++)
+                            append_array(&vm->array_storage[right.value], items[i]);
+                        
+                        left = right;
                     } else {
                         for (int i = 0; i < arr.size; i++)
                             append_array(&vm->array_storage[left.value], arr.items[i]);
@@ -113,7 +123,7 @@ void run(VM *vm, int size) {
 
             case 0x11: // STORE_MEM
                 result = pop(vm);
-                store_data(&vm->data_segment, instr.arg.value, result);
+                store_data(vm, &vm->data_segment, instr.arg.value, result);
                 break;
 
             case 0x12: // LOAD
@@ -156,7 +166,7 @@ void run(VM *vm, int size) {
 
             case 0x18: // STORE_LOCAL
                 left = pop(vm);
-                store_data(&vm->frames[vm->fp - 1].locals, instr.arg.value, left);
+                store_data(vm, &vm->frames[vm->fp - 1].locals, instr.arg.value, left);
                 break;
             
             case 0x19: // LOAD_LOCAL
