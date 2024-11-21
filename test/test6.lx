@@ -1,5 +1,20 @@
+// write() Args: filename, what to write, if is binary, if overwrite
+// read() Args: filename, from where, if is binary, to where
 let string file = "test/test.txt";
 
-write(file, 0, "Hello World!", -1);
+write(file, "Hello World!\n", false, true);
 print(read(file, 0, false, 5)); // Hello
 print(read(file, 6, false, -1)); // World!
+
+let string bin_file = "test/test.bin";
+let int[] aux = [72, 101, 108, 108, 111];
+
+write(bin_file, aux, true, true);
+
+let int[] read_int;
+read_int = read(bin_file, 0, 4, -1);
+print(read_int + "\n");
+
+let string read_char;
+read_char = read(bin_file, 0, 4, -1);
+print(read_char);

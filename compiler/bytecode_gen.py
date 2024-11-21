@@ -19,7 +19,7 @@ class ByteCodeCompiler:
                 self.add_instruction(statement, scope)
 
     def throw_error(self, msg: str):
-        print(f"Compilation Error: {msg}")
+        raise Exception(f"Compilation Error: {msg}")
         exit()
 
     def add_instruction(self, node, scope: bool = False):
@@ -48,16 +48,16 @@ class ByteCodeCompiler:
                     self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[identifier]))
                 
                 for setter in list_set:
-                    if isinstance(setter, Expression):
+                    if isinstance(setter, Expression) and setter.value_type != "IDENTIFIER":
                         self.append_bytecode((bytecode_instructions["LIST_ACCESS"], setter.value))
                     else:
-                        self.add_instruction(setter)
+                        self.add_instruction(setter, scope)
                         self.append_bytecode((bytecode_instructions["LIST_ACCESS"], -1))
                 
-                if isinstance(node.identifier.index, Expression):
+                if isinstance(node.identifier.index, Expression) and node.identifier.index.value_type != "IDENTIFIER":
                     self.append_bytecode((bytecode_instructions["LIST_SET"], node.identifier.index.value))
                 else:
-                    self.add_instruction(node.identifier.index)
+                    self.add_instruction(node.identifier.index, scope)
                     self.append_bytecode((bytecode_instructions["LIST_SET"], -1))
             elif scope and node.identifier in self.locals: 
                 self.append_bytecode((bytecode_instructions["STORE_LOCAL"], self.locals[node.identifier]))
@@ -218,10 +218,10 @@ class ByteCodeCompiler:
 
             list_access.append(node.index)
             for access in list_access:
-                if isinstance(access, Expression):
+                if isinstance(access, Expression) and access.value_type != "IDENTIFIER":
                     self.append_bytecode((bytecode_instructions["LIST_ACCESS"], access.value))
                 else:
-                    self.add_instruction(access)
+                    self.add_instruction(access, scope)
                     self.append_bytecode((bytecode_instructions["LIST_ACCESS"], -1))
 
     def get_bytecode(self):
