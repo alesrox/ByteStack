@@ -63,7 +63,7 @@ void convert_int_to_str(DynamicArray *arr, uint32_t integer) {
 
     if (value < 0) {
         uint32_t temp = 0;
-        temp |= ((uint32_t) 45) << 0;
+        temp |= ((uint32_t) 45);
         append_array(arr, temp);
         value = -value;
     }
@@ -136,8 +136,13 @@ void list_append(VM* vm, DataItem obj) {
 
     if (vm->array_storage[obj.value].type == UNASSIGNED_TYPE)
         vm->array_storage[obj.value].type = aux.type;
-    else if (vm->array_storage[obj.value].type != aux.type)
-        throw_error(error_messages[ERR_BAD_TYPE]);
+    else if (vm->array_storage[obj.value].type != aux.type) {
+        if (vm->array_storage[obj.value].type < CHAR_TYPE) {
+            if (aux.type == FLOAT_TYPE) aux.value = (int) extract_float(aux);
+            else if (vm->array_storage[obj.value].type == FLOAT_TYPE) aux.value = format_float(aux.value);
+            else throw_error(error_messages[ERR_BAD_TYPE]);
+        } else throw_error(error_messages[ERR_BAD_TYPE]);
+    }
 
     append_array(&vm->array_storage[obj.value], aux.value);
 }
@@ -282,8 +287,6 @@ void list_lower(VM* vm, DataItem obj) {
 }
 
 void list_to_string(VM* vm, DataItem obj) {
-    // TODO
-    // CHECK IF IS NOT A STRING
     DataItem arr_pos = {ARRAY_TYPE, vm->asp++};
     DynamicArray* converterd_arr = &vm->array_storage[arr_pos.value];
     create_array(converterd_arr, 4);

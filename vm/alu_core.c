@@ -57,7 +57,7 @@ float float_alu(VM* vm, DataItem left, DataItem right, uint8_t op) {
     return 0;
 }
 
-int int_alu(VM* vm, uint32_t left, uint32_t right, uint8_t op) {
+uint32_t int_alu(VM* vm, uint32_t left, uint32_t right, uint8_t op) {
     switch (op) {
         case 0x01: // ADD
             return left + right;
@@ -65,10 +65,6 @@ int int_alu(VM* vm, uint32_t left, uint32_t right, uint8_t op) {
             return left - right;
         case 0x03: // MUL
             return left * right;
-        case 0x04: // DIV
-            return left / right;
-        case 0x05: // MOD
-            return left % right;
         case 0x09: // EQ
             return left == right;
         case 0x0A: // NEQ
@@ -91,9 +87,13 @@ DataItem alu(VM* vm, DataItem left, DataItem right, uint8_t op) {
     DataItem result;
     result.type = INT_TYPE;
 
-    if (op >= 0x06 && op <= 0x08) {
+    int logic_op = op >= 0x06 && op <= 0x08;
+    int requires_float = left.type == FLOAT_TYPE || right.type == FLOAT_TYPE;
+    int div_mod_op = op == 0x04 || op == 0x05;
+
+    if (logic_op) {
         result.value = logic_unit(vm, left.value, right.value, op);
-    } else if (left.type == FLOAT_TYPE || right.type == FLOAT_TYPE) {
+    } else if (requires_float || div_mod_op) {
         result.type = FLOAT_TYPE;
         result.value = format_float(float_alu(vm, left, right, op));
     } else {

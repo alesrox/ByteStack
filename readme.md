@@ -19,7 +19,7 @@ python compiler/main.py test/test3.lx output
 
 ## Run the Virtual Machine
 After compiling, you can execute the virtual machine with a binary file as input:
-<binary file> is output.bin by default
+<binary file>
 ```bash
 ./vml <binary file>
 ```

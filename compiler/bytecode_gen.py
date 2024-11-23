@@ -19,7 +19,7 @@ class ByteCodeCompiler:
                 self.add_instruction(statement, scope)
 
     def throw_error(self, msg: str):
-        raise Exception(f"Compilation Error: {msg}")
+        print(f"Compilation Error: {msg}")
         exit()
 
     def add_instruction(self, node, scope: bool = False):
@@ -196,12 +196,7 @@ class ByteCodeCompiler:
                 self.append_bytecode((bytecode_instructions["CALL"], self.identifiers[node.identifier] + 1))
         elif isinstance(node, list):
             for item in node[::-1]:
-                if isinstance(item, list):
-                    self.add_instruction(item)
-                elif item.value_type == 'FLOAT_LITERAL':
-                    self.append_bytecode((bytecode_instructions["STORE_FLOAT"], item.value))
-                else:
-                    self.append_bytecode((bytecode_instructions["STORE"], item.value))
+                self.add_instruction(item)
             
             self.append_bytecode((bytecode_instructions["BUILD_LIST"], len(node)))
         elif isinstance(node, ListNode):
