@@ -7,17 +7,6 @@ The Virtual Machine (./vml) is compiled for MacOS systems with ARM chips, but yo
 gcc vm/*.c -o vml
 ```
 
-## Run the Virtual Machine
-After compiling, you can execute the virtual machine with a binary file as input:
-<binary file> is output.bin by default
-```bash
-./vml <binary file>
-```
-Example:
-```bash
-./vml output.bin
-```
-
 ## Compiler Usage
 The compiler, written in Python, takes a .lx file and generates the corresponding bytecode for the virtual machine.
 ```bash
@@ -26,6 +15,17 @@ python compiler/main.py <lex file> <output filename>
 Example
 ```bash
 python compiler/main.py test/test3.lx output
+```
+
+## Run the Virtual Machine
+After compiling, you can execute the virtual machine with a binary file as input:
+<binary file> is output.bin by default
+```bash
+./vml <binary file>
+```
+Example:
+```bash
+./vml output
 ```
 
 ## Compiler Flags
