@@ -21,11 +21,11 @@ Example:
 ## Compiler Usage
 The compiler, written in Python, takes a .lx file and generates the corresponding bytecode for the virtual machine.
 ```bash
-python compiler/main.py <lex file>
+python compiler/main.py <lex file> <output filename>
 ```
 Example
 ```bash
-python compiler/main.py test/test3.lx
+python compiler/main.py test/test3.lx output
 ```
 
 ## Compiler Flags
