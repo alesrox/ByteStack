@@ -65,47 +65,38 @@ void run(VM *vm, int size) {
             left = pop(vm);
 
             // Only ints or floats
-            if (right.type < 3 && left.type < 3) {
+            if (right.type <= 3 && left.type <= 3) {
                 result = alu(vm, left, right, instr.opcode);
                 push(vm, result);
-                continue;
-            } 
+            } else if (right.type == ARRAY_TYPE ^ left.type == ARRAY_TYPE) {
+                DynamicArray* arr = &vm->array_storage[(right.type == ARRAY_TYPE) ? right.value : left.value];
+                DataItem item = (right.type != ARRAY_TYPE) ? right : left;
+
+                if (arr->type == CHAR_TYPE) {
+                    void (*convert_func)(DynamicArray*, uint32_t);
+                    convert_func = (item.type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
+                    convert_func(arr, item.value);
+                } else append_array(arr, item.value);
+
+                push(vm, (right.type == ARRAY_TYPE) ? right : left);
+            } else /* if (right.type == ARRAY_TYPE && left.type == ARRAY_TYPE) */ {
+                DynamicArray* left_arr = &vm->array_storage[left.value];
+                DynamicArray* right_arr = &vm->array_storage[right.value];
+
+                for (int i = 0; i < right_arr->size; i++)
+                    append_array(left_arr, right_arr->items[i]);
+                    
+                push(vm, left);
+            }
+            continue;
         }
 
         switch (instr.opcode) {
             case 0x01: // ADD -> Only if some of one are an array -> WILL BE MODIFIED
                 if (right.type == ARRAY_TYPE && left.type == ARRAY_TYPE) {
-                    DynamicArray arr = vm->array_storage[right.value];
-                    if (vm->array_storage[left.value].type == CHAR_TYPE && arr.type != CHAR_TYPE) {
-                        convert_list_to_str(vm, &vm->array_storage[left.value], arr);
-                    } else if (arr.type == CHAR_TYPE && vm->array_storage[left.value].type != CHAR_TYPE) {
-                        uint32_t *items = arr.items;
-                        int old_size = arr.size;
-                        create_array(&vm->array_storage[right.value], 4);
-                        vm->array_storage[right.value].type = CHAR_TYPE;
-                        convert_list_to_str(vm, &vm->array_storage[right.value], vm->array_storage[left.value]);
-
-                        for (int i = 0; i < old_size; i++)
-                            append_array(&vm->array_storage[right.value], items[i]);
-                        
-                        left = right;
-                    } else {
-                        for (int i = 0; i < arr.size; i++)
-                            append_array(&vm->array_storage[left.value], arr.items[i]);
-                    }
-
-                    result = left;
+                    
                 } else /*if (right.type == ARRAY_TYPE ^ left.type == ARRAY_TYPE)*/ {
-                    DynamicArray* arr = &vm->array_storage[(right.type == ARRAY_TYPE) ? right.value : left.value];
-                    DataItem item = (right.type != ARRAY_TYPE) ? right : left;
-
-                    void (*convert_func)(DynamicArray*, uint32_t);
-                    convert_func = (item.type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
-
-                    if (arr->type == CHAR_TYPE) convert_func(arr, item.value);
-                    else append_array(arr, item.value);
-
-                    result = (right.type == ARRAY_TYPE) ? right : left;
+                    
                 }
 
                 push(vm, result);

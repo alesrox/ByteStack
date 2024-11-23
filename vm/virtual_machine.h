@@ -79,6 +79,7 @@ DataItem pop(VM *vm);
 void push(VM *vm, DataItem value);
 void store_data(VM* vm, DataSegment *ds, int address, DataItem item);
 void built_in_subprint(DataItem item, FILE *out);
+void built_in_print(VM *vm);
 void syscall(VM *vm, int arg);
 
 // ALU Core
@@ -102,7 +103,6 @@ void objcall(VM *vm, int arg);
 // Stings Utils
 void convert_int_to_str(DynamicArray *arr, uint32_t value);
 void convert_float_to_str(DynamicArray *arr, uint32_t value);
-void convert_list_to_str(VM *vm, DynamicArray *arr, DynamicArray list);
 
 // Debug Tools
 void show_vm_state(VM vm);

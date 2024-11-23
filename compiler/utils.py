@@ -65,4 +65,5 @@ built_in_obj_funcs = {
     'max'       : 9,
     'lower'     : 10,
     'upper'     : 11,
+    'toString'  : 12,
 }

@@ -44,8 +44,8 @@ void built_in_subprint(DataItem item, FILE *out) {
     } else if (item.type == CHAR_TYPE) {
         uint32_t data = item.value;
         for (int i = 0; i < 4; i++) {
-            char ch = (data >> (8 * (3 - i))) & 0xFF;
-            if (ch == '\0') continue;
+            char ch = (data >> (8 * i)) & 0xFF;
+            if (ch == '\0') break;
             fprintf(out, "%c", ch);
         }
     }
@@ -120,7 +120,7 @@ void str_type(VM* vm, DynamicArray* arr, DataItem item) {
 
     if (shift != 24) append_array(arr, temp);
     if (type == ARRAY_TYPE) {
-        append_array(arr, 95 << 24);
+        append_array(arr, 95);
         str_type(vm, arr, (DataItem){vm->array_storage[item.value].type, 0});
     }
 } 
@@ -166,7 +166,7 @@ void built_in_read(VM *vm) {
     char filename[file_arr.size * 4 + 1];
     for (int i = 0; i < file_arr.size; i++)
         for (int j = 0; j < 4; j++)
-            filename[index++] = (file_arr.items[i] >> (8 * (3 - j))) & 0xFF;
+            filename[index++] = (file_arr.items[i] >> (8 * j)) & 0xFF;
     
     filename[file_arr.size * 4] = '\0';
 
@@ -226,7 +226,7 @@ void built_in_write(VM *vm) {
     char filename[file_arr.size * 4 + 1];
     for (int i = 0; i < file_arr.size; i++)
         for (int j = 0; j < 4; j++)
-            filename[index++] = (file_arr.items[i] >> (8 * (3 - j))) & 0xFF;
+            filename[index++] = (file_arr.items[i] >> (8 * j)) & 0xFF;
     
     filename[file_arr.size * 4] = '\0';
 
