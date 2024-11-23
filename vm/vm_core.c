@@ -28,8 +28,11 @@ void store_data(VM* vm, DataSegment *ds, int address, DataItem item) {
 
     if (item.type == ARRAY_TYPE && ds->data[address].type == ARRAY_TYPE) {
         array_assigment(vm, ds->data[address].value, item.value);
-    } else if (ds->data[address].type != UNASSIGNED_TYPE && item.type != ds->data[address].type)
+    } else if (ds->data[address].type != UNASSIGNED_TYPE && item.type != ds->data[address].type) {
+        if (item.type == FLOAT_TYPE) item.value = (int) extract_float(item);
+        else if (ds->data[address].type == FLOAT_TYPE) item.value = format_float(item.value);
         item.type = ds->data[address].type; // TODO: CASTING
+    }
 
     ds->data[address] = item;
 }
@@ -107,18 +110,18 @@ void str_type(VM* vm, DynamicArray* arr, DataItem item) {
 
     DataType type = item.type;
 
-    uint32_t temp = 0; int shift = 24;
+    uint32_t temp = 0; int shift = 0;
     for (int i = 0; get_type[type][i] != '\0'; i++) {
         temp |= ((uint32_t)(unsigned char)get_type[type][i]) << shift;
-        shift -= 8;
+        shift += 8;
 
-        if (shift < 0) {
+        if (shift == 32) {
             append_array(arr, temp);
-            temp = 0; shift = 24;
+            temp = 0; shift = 0;
         }
     }
 
-    if (shift != 24) append_array(arr, temp);
+    if (shift != 0) append_array(arr, temp);
     if (type == ARRAY_TYPE) {
         append_array(arr, 95);
         str_type(vm, arr, (DataItem){vm->array_storage[item.value].type, 0});
@@ -147,7 +150,6 @@ void built_in_type(VM *vm) {
 
     str_type(vm, &vm->array_storage[type.value], arg);
     push(vm, type);
-
 }
 
 void built_in_read(VM *vm) {

@@ -17,7 +17,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 2 and len(sys.argv[-1]) > 2:
         output_file_name = sys.argv[-1]
     else:
-        output_file_name = 'output.bin'
+        output_file_name = 'output.o'
 
     data = file.read()
     lexer.input(data)

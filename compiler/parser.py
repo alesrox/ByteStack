@@ -17,7 +17,7 @@ class Parser:
     
     def throw_error(self, msg: str):
         token = self.current_token
-        print(f"Compilation Error on line {token.lineno} and lexpos {token.lexpos}: {msg}")
+        raise Exception(f"Compilation Error on line {token.lineno} and lexpos {token.lexpos}: {msg}")
         exit()
     
     def program(self) -> Program:

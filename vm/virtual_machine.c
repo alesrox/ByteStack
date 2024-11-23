@@ -237,7 +237,7 @@ void run(VM *vm, int size) {
 }
 
 int main(int argc, char* argv[]) {
-    const char* filename = (argc < 2) ? "output.bin" : argv[1];
+    const char* filename = (argc < 2) ? "output.o" : argv[1];
     if (argc > 2 && argv[2][0] == '-' && argv[2][1] == 'd' && argv[2][2] == '\0') debuging = 1;
     if (debuging) printf("Debug mode is ON.");
 
