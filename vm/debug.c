@@ -26,11 +26,11 @@ void show_vm_state(VM vm) {
         printf("{%s, %d}", get_type[item.type], item.value);
         if (item.type == ARRAY_TYPE) {
             DynamicArray arr = vm.array_storage[item.value];
-            if (arr.type == CHAR_TYPE) printf("\"");
+            if (arr.type == CHAR_TYPE) printf(" -> \"");
             else printf(" -> %s:[", get_type[arr.type]);
             for (int i = 0; i < arr.size; i++) {
                 built_in_subprint((DataItem){arr.type, arr.items[i]}, stdout);
-                if (arr.type != CHAR_TYPE && i < arr.size-1) printf(", ");
+                if (arr.type != CHAR_TYPE && i < arr.size - 1) printf(", ");
             }
             
             printf((arr.type == CHAR_TYPE) ? "\"" : "]");
