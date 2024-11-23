@@ -46,7 +46,7 @@ def string_to_list(string: str) -> list:
     for i in range(0, len(string), 4):
         block = string[i:i + 4]
         packed = 0
-        for j, char in enumerate(block):
+        for j, char in enumerate(reversed(block)):
             packed |= ord(char) << (24 - j * 8)
         list_from_string.append(packed)
 

@@ -13,7 +13,7 @@ write(bin_file, aux, true, true);
 
 let int[] read_int;
 read_int = read(bin_file, 0, 4, -1);
-print(read_int + "\n");
+print(read_int.toString() + "\n");
 
 let string read_char;
 read_char = read(bin_file, 0, 4, -1);

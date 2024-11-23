@@ -62,7 +62,9 @@ void convert_int_to_str(DynamicArray *arr, uint32_t integer) {
     int digits[10], digit_count = 0;
 
     if (value < 0) {
-        append_array(arr, 45 << 24); // -
+        uint32_t temp = 0;
+        temp |= ((uint32_t) 45) << 0;
+        append_array(arr, temp);
         value = -value;
     }
 
@@ -71,19 +73,19 @@ void convert_int_to_str(DynamicArray *arr, uint32_t integer) {
         value /= 10;
     } while (value > 0);
 
-
-    uint32_t temp = 0; int shift = 24;
+    uint32_t temp = 0; 
+    int shift = 0;
     for (int i = digit_count - 1; i >= 0; i--) {
         temp |= ((uint32_t)(48 + digits[i])) << shift;
-        shift -= 8;
+        shift += 8;
 
-        if (shift < 0) {
+        if (shift == 32) {
             append_array(arr, temp);
-            temp = 0; shift = 24;
+            temp = 0; shift = 0;
         }
     }
 
-    if (shift != 24) append_array(arr, temp);
+    if (shift != 0) append_array(arr, temp);
 }
 
 void convert_float_to_str(DynamicArray *arr, uint32_t float_num) {
@@ -91,50 +93,44 @@ void convert_float_to_str(DynamicArray *arr, uint32_t float_num) {
     float value = extract_float(aux);
 
     if (value < 0) {
-        append_array(arr, 45 << 24); // -
+        uint32_t temp = 0;
+        temp |= ((uint32_t)45) << 0; // '-' en el último byte
+        append_array(arr, temp);
         value = -value;
     }
 
-    int integer_part = (int) value;
+    int integer_part = (int)value;
     float fractional_part = value - integer_part;
 
     convert_int_to_str(arr, integer_part);
 
     if (fractional_part > 0) {
-        append_array(arr, 46 << 24); // .
-        // Limit to 6 decimals
-        uint32_t temp = 0; int shift = 24;
+        uint32_t temp = 0;
+        int shift = 0;
+
+        append_array(arr, 46); // '.'
+
         for (int i = 0; i < 8 && fractional_part > 0.0001; i++) {
             fractional_part *= 10;
-            int digit = (int) fractional_part;
-            temp |= ((uint32_t)(48 + digit)) << shift;
-            shift -= 8;
+            int digit = (int)fractional_part;
 
-            if (shift < 0) {
+            temp |= ((uint32_t)(48 + digit)) << shift;
+            shift += 8;
+
+            if (shift == 32) {
                 append_array(arr, temp);
-                temp = 0; shift = 24;
+                temp = 0; 
+                shift = 0;
             }
+
             fractional_part -= digit;
         }
 
-        if (shift != 24) append_array(arr, temp);
+        if (shift != 0) append_array(arr, temp);
     }
 }
 
-void convert_list_to_str(VM* vm, DynamicArray* arr, DynamicArray list) {
-    append_array(arr, ((uint32_t) '[') << 24);
-
-    void (*convert_func)(DynamicArray*, uint32_t);
-    convert_func = (list.type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
-
-    for (int i = 0; i < list.size; i++) {
-        (list.type == ARRAY_TYPE) ? convert_list_to_str(vm, arr, vm->array_storage[list.items[i]]) : convert_func(arr, list.items[i]);
-        if (i != list.size - 1) append_array(arr, ((uint32_t) ',') << 24);
-    }
-
-    append_array(arr, ((uint32_t) ']') << 24);
-}
-
+// List functions
 void list_append(VM* vm, DataItem obj) {
     DataItem aux = pop(vm);
 
@@ -188,8 +184,8 @@ void list_slice(VM* vm, DataItem obj) {
             int current_uint32_index = i / 4;
             int char_index_in_uint32 = i % 4;
             uint32_t value = arr.items[current_uint32_index];
-            uint8_t char_value = (value >> (8 * (3 - char_index_in_uint32))) & 0xFF;
-            current_value |= (char_value << (8 * (3 - char_count)));
+            uint8_t char_value = (value >> (8 * char_index_in_uint32)) & 0xFF;
+            current_value |= (char_value << (8 * char_count));
             char_count++;
 
             if (char_count == 4) {
@@ -252,9 +248,9 @@ void list_upper(VM* vm, DataItem obj) {
     for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
         uint32_t value = vm->array_storage[obj.value].items[i];
         for (int j = 0; j < 4; j++) {
-            uint8_t char_value = (value >> (8 * (3 - j))) & 0xFF;
+            uint8_t char_value = (value >> (8 * j)) & 0xFF;
             if (char_value >= 'a' && char_value <= 'z') char_value -= 32;
-            value = (value & ~(0xFF << (8 * (3 - j)))) | (char_value << (8 * (3 - j)));
+            value = (value & ~(0xFF << (8 * j))) | (char_value << (8 * j));
         }
         append_array(&vm->array_storage[arr.value], value);
     }
@@ -275,14 +271,54 @@ void list_lower(VM* vm, DataItem obj) {
     for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
         uint32_t value = vm->array_storage[obj.value].items[i];
         for (int j = 0; j < 4; j++) {
-            uint8_t char_value = (value >> (8 * (3 - j))) & 0xFF;
+            uint8_t char_value = (value >> (8 * j)) & 0xFF;
             if (char_value >= 'A' && char_value <= 'Z') char_value += 32;
-            value = (value & ~(0xFF << (8 * (3 - j)))) | (char_value << (8 * (3 - j)));
+            value = (value & ~(0xFF << (8 * j))) | (char_value << (8 * j));
         }
         append_array(&vm->array_storage[arr.value], value);
     }
 
     push(vm, arr);
+}
+
+void list_to_string(VM* vm, DataItem obj) {
+    // TODO
+    // CHECK IF IS NOT A STRING
+    DataItem arr_pos = {ARRAY_TYPE, vm->asp++};
+    DynamicArray* converterd_arr = &vm->array_storage[arr_pos.value];
+    create_array(converterd_arr, 4);
+    converterd_arr->type = CHAR_TYPE;
+
+    DynamicArray* arr = &vm->array_storage[obj.value];
+    if (arr->type == CHAR_TYPE) {
+        push(vm, obj);
+        return;
+    }
+
+    append_array(converterd_arr, '[');
+
+    void (*convert_func)(DynamicArray*, uint32_t);
+    convert_func = (arr->type == INT_TYPE) ? convert_int_to_str : convert_float_to_str;
+
+    for (int i = 0; i < arr->size; i++) {
+        if (arr->type == ARRAY_TYPE) {
+            list_to_string(vm, (DataItem){ARRAY_TYPE, arr->items[i]});
+            DynamicArray* aux = &vm->array_storage[pop(vm).value];
+
+            for (int j = 0; j < aux->size; j++)
+                append_array(converterd_arr, aux->items[j]);
+            
+            vm->asp--;
+        } else {
+            convert_func(converterd_arr, arr->items[i]);
+        }
+
+        if (i != arr->size - 1) 
+            append_array(converterd_arr, ',');
+    }
+
+    append_array(converterd_arr, ']');
+    push(vm, arr_pos);
 }
 
 void (*objfuncs[])(VM* vm, DataItem obj) = {
@@ -298,9 +334,10 @@ void (*objfuncs[])(VM* vm, DataItem obj) = {
     list_max,
     list_lower,
     list_upper,
+    list_to_string,
 };
 
 void objcall(VM *vm, int arg) {
-    if (arg > -1 && arg < 12) objfuncs[arg](vm, pop(vm));
+    if (arg > -1 && arg < 13) objfuncs[arg](vm, pop(vm));
     else printf("Unknown objcall: %d\n", arg);
 }

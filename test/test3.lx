@@ -1,7 +1,7 @@
 let int[] list = [1, 2, 3, 57];
-print("List: " + list + "\n");
+print("List: " + list.toString() + "\n");
 list.pop();
 list.append(40); 
 list.remove(1); 
-print("Modded list: " + list + "\n");
+print("Modded list: " + list.toString() + "\n");
 print("Size list: " + list.size());
