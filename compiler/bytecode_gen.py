@@ -157,7 +157,8 @@ class ByteCodeCompiler:
         elif isinstance(node, FunctionDeclaration):
             self.append_bytecode((bytecode_instructions["STORE"], self.length+3))
             self.append_bytecode((bytecode_instructions["STORE_MEM"], -1))
-            self.identifiers[node.identifier] = self.length
+            func_pos = self.length
+            self.identifiers[node.identifier] = len(self.identifiers)
             self.append_bytecode((0, 0)) # JUMP x
 
             for arg in node.args:
@@ -168,7 +169,7 @@ class ByteCodeCompiler:
             self.locals = {}
             if self.bytecode[-1] != (bytecode_instructions["RETURN"], 0):
                 self.append_bytecode((bytecode_instructions["RETURN"], 0))
-            self.bytecode[self.identifiers[node.identifier]] = ((bytecode_instructions["JUMP"], self.length))
+            self.bytecode[func_pos] = ((bytecode_instructions["JUMP"], self.length))
         elif isinstance(node, ReturnStatement):
             self.add_instruction(node.value, True)
             self.append_bytecode((bytecode_instructions["RETURN"], 0))
@@ -193,7 +194,7 @@ class ByteCodeCompiler:
             if node.identifier in in_funcs:
                 self.append_bytecode((opcode, in_funcs[node.identifier]))
             else:
-                self.append_bytecode((bytecode_instructions["CALL"], self.identifiers[node.identifier] + 1))
+                self.append_bytecode((bytecode_instructions["CALL"], self.identifiers[node.identifier]))
         elif isinstance(node, list):
             for item in node[::-1]:
                 self.add_instruction(item)
