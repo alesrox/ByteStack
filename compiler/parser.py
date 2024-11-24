@@ -141,7 +141,15 @@ class Parser:
         return left
     
     def literal_expression(self):
-        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL']:
+        if self.current_token and self.current_token.type == 'LPAREN':
+            self.next_token()  # Consume '('
+            expr = self.binary_expression()
+            if not self.current_token or self.current_token.type != 'RPAREN':
+                self.throw_error("Expected ')'")
+
+            self.next_token()
+            return expr
+        elif self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL']:
             token = self.current_token
             self.next_token()
             return Expression(token.type, token.value)
