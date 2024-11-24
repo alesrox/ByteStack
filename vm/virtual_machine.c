@@ -18,7 +18,7 @@ void throw_error(char* msg) {
     exit(EXIT_FAILURE);
 }
 
-int load_program(VM *vm, const char *filename) {
+void load_program(VM *vm, const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (!file) throw_error(error_messages[ERR_FILE_NOT_FOUND]);
     fseek(file, 0, SEEK_END);
@@ -31,6 +31,7 @@ int load_program(VM *vm, const char *filename) {
     vm->data_segment.capacity = MEMORY_SIZE;
     vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
     vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
+    vm->num_instr = num_instructions;
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
@@ -46,11 +47,9 @@ int load_program(VM *vm, const char *filename) {
     vm->sp = 0;
     vm->fp = 0;
     vm->asp = 0;
-
-    return num_instructions;
 }
 
-void run(VM *vm, int size) {
+void run(VM *vm) {
     do {
         Instruction instr = vm->memory[vm->pc++];
         DataItem left, right, result;
@@ -145,19 +144,12 @@ void run(VM *vm, int size) {
                 break;
 
             case 0x17: // CALL
-                if (vm->fp == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
-
-                vm->frames[vm->fp].locals.pointer = 0;
-                vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
-                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * MEMORY_SIZE);
-                vm->frames[vm->fp].return_address = vm->pc;
-                vm->pc = instr.arg.value;
-                vm->fp++;
+                run_function(vm, vm->data_segment.data[instr.arg.value].value);
                 break;
 
             case 0x18: // STORE_LOCAL
-                left = pop(vm);
-                store_data(vm, &vm->frames[vm->fp - 1].locals, instr.arg.value, left);
+                result = pop(vm);
+                store_data(vm, &vm->frames[vm->fp - 1].locals, instr.arg.value, result);
                 break;
             
             case 0x19: // LOAD_LOCAL
@@ -168,7 +160,7 @@ void run(VM *vm, int size) {
                 free(vm->frames[vm->fp - 1].locals.data);
                 vm->pc = vm->frames[vm->fp - 1].return_address;
                 vm->fp--;
-                break;
+                return;
 
             case 0x1B: // BUILD_LIST
                 result.type = ARRAY_TYPE;
@@ -176,7 +168,7 @@ void run(VM *vm, int size) {
 
                 aux = result.value;
                 length = (instr.arg.value < 4) ? 4 : (instr.arg.value + 3) & ~3u;
-                create_array(&vm->array_storage[aux], length);
+                init_array(&vm->array_storage[aux], length);
                 
                 for (int i = 0; i < instr.arg.value; i++) {
                     left = pop(vm);
@@ -209,7 +201,7 @@ void run(VM *vm, int size) {
 
                 aux = result.value;
                 length = (instr.arg.value < 4) ? 4 : (instr.arg.value + 3) & ~3u;
-                create_array(&vm->array_storage[aux], length);
+                init_array(&vm->array_storage[aux], length);
                 
                 vm->array_storage[aux].type = CHAR_TYPE;
                 for (int i = 0; i < instr.arg.value; i++) {
@@ -233,7 +225,7 @@ void run(VM *vm, int size) {
                 syscall(vm, instr.arg.value);
                 break;
         }
-    } while (vm->pc < size);
+    } while (vm->pc < vm->num_instr);
 }
 
 int main(int argc, char* argv[]) {
@@ -242,8 +234,8 @@ int main(int argc, char* argv[]) {
     if (debuging) printf("Debug mode is ON.");
 
     VM virtual_machine;
-    int size = load_program(&virtual_machine, filename);
-    run(&virtual_machine, size);
+    load_program(&virtual_machine, filename);
+    run(&virtual_machine);
     if (debuging) { virtual_machine.pc++; show_vm_state(virtual_machine); }
 
     return 0;
