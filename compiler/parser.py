@@ -115,6 +115,12 @@ class Parser:
 
             expr = self.binary_expression()
             return expr
+
+        elif self.current_token and self.current_token.type == 'NOT':
+            operator = self.current_token.value
+            self.next_token()
+            operand = self.binary_expression()
+            return BinaryExpression(operator, operand, None)
         
         self.throw_error(f"Unexpected Token: {self.current_token}")
 
