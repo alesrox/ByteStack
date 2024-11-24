@@ -4,11 +4,11 @@ list.pop();
 list.append(40); 
 list.remove(1); 
 print("Modded list: " + list.toString() + "\n");
-print("Size list: " + list.size());
+print("Size list: " + list.size() + "\n");
 
 let [] matriz = [[1, 10], [3, 4]];
 matriz[0][1] = 2;
-print("Matriz: " + matriz.toString());
+print("Matriz: " + matriz.toString() + "\n");
 
 let [] empty_list = [];
 if (empty_list.is_empty()) { print("It's empty\n"); } 
