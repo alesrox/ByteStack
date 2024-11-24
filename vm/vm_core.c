@@ -37,6 +37,19 @@ void store_data(VM* vm, DataSegment *ds, int address, DataItem item) {
     ds->data[address] = item;
 }
 
+void run_function(VM* vm, uint32_t func_id) {
+    if (vm->fp == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+
+    vm->frames[vm->fp].locals.pointer = 0;
+    vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
+    vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * MEMORY_SIZE);
+    vm->frames[vm->fp].return_address = vm->pc;
+    vm->pc = func_id;
+    vm->fp++;
+
+    run(vm);
+}
+
 void built_in_exit(VM *vm) { exit(EXIT_SUCCESS); }
 
 void built_in_subprint(DataItem item, FILE *out) {
@@ -133,7 +146,7 @@ void built_in_scan(VM *vm) {
     char input_str[2048];
 
     scanf("%2047s", input_str);
-    create_array(&vm->array_storage[input.value], 4);
+    init_array(&vm->array_storage[input.value], 4);
     vm->array_storage[input.value].type = CHAR_TYPE;
 
     for (int i = 0; i < 2048 && input_str[i] != '\0'; i++)
@@ -145,7 +158,7 @@ void built_in_scan(VM *vm) {
 void built_in_type(VM *vm) {
     DataItem arg = pop(vm);
     DataItem type = {ARRAY_TYPE, vm->asp++};
-    create_array(&vm->array_storage[type.value], 4);
+    init_array(&vm->array_storage[type.value], 4);
     vm->array_storage[type.value].type = CHAR_TYPE;
 
     str_type(vm, &vm->array_storage[type.value], arg);
@@ -162,7 +175,7 @@ void built_in_read(VM *vm) {
 
     DynamicArray file_arr = vm->array_storage[pop(vm).value];
     DataItem read_result = {ARRAY_TYPE, vm->asp++};
-    create_array(&vm->array_storage[read_result.value], 4);
+    init_array(&vm->array_storage[read_result.value], 4);
 
     int index = 0;
     char filename[file_arr.size * 4 + 1];
@@ -195,18 +208,18 @@ void built_in_read(VM *vm) {
         fseek(file, start, SEEK_SET);
 
         vm->array_storage[read_result.value].type = CHAR_TYPE;
-        int shift = 24; uint32_t temp = 0;
+        int shift = 0; uint32_t temp = 0;
         while ((c = fgetc(file)) != EOF && i < end) {
             temp |= ((uint32_t)(unsigned char)c) << shift;
-            shift -= 8; i++;
+            shift += 8; i++;
 
-            if (shift < 0 || i == end) {
+            if (shift == 32 || i == end) {
                 append_array(&vm->array_storage[read_result.value], temp);
-                temp = 0; shift = 24;
+                temp = 0; shift = 0;
             }
         }
 
-        if (shift != 24) append_array(&vm->array_storage[read_result.value], temp);
+        if (shift != 0) append_array(&vm->array_storage[read_result.value], temp);
     }
 
     push(vm, read_result);

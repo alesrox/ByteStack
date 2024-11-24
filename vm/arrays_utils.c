@@ -13,7 +13,7 @@ void array_assigment(VM* vm, int address, int item) {
         throw_error(error_messages[ERR_BAD_TYPE]);
 }
 
-void create_array(DynamicArray *array, int initial_capacity) {
+void init_array(DynamicArray *array, int initial_capacity) {
     array->items = malloc(initial_capacity * sizeof(uint32_t));
     array->capacity = initial_capacity;
     array->type = UNASSIGNED_TYPE;
@@ -181,7 +181,7 @@ void list_slice(VM* vm, DataItem obj) {
     if (from < 0 || from > size || to < 0 || to > size)
         throw_error(error_messages[ERR_OUT_OF_BOUNDS]);
 
-    create_array(&vm->array_storage[sliced_arr.value], 4);
+    init_array(&vm->array_storage[sliced_arr.value], 4);
     vm->array_storage[sliced_arr.value].type = arr.type;
     if (arr.type == CHAR_TYPE) {
         uint32_t current_value = 0; int char_count = 0;
@@ -209,15 +209,39 @@ void list_slice(VM* vm, DataItem obj) {
 }
 
 void list_map(VM* vm, DataItem obj) {
-    // TODO
+    DataItem mapped_arr = {ARRAY_TYPE, vm->asp++};
     DataItem map_func = pop(vm);
-    push(vm, obj);
+    DynamicArray arr = vm->array_storage[obj.value];
+
+    init_array(&vm->array_storage[mapped_arr.value], arr.capacity);
+    vm->array_storage[mapped_arr.value].type = arr.type;
+    for (int i = 0; i < arr.size; i++) {
+        DataItem arg = {arr.type, arr.items[i]};
+        push(vm, arg);
+        run_function(vm, map_func.value);
+        append_array(&vm->array_storage[mapped_arr.value], pop(vm).value);
+    }
+
+    push(vm, mapped_arr);
 }
 
 void list_filter(VM* vm, DataItem obj) {
-    // TODO
-    DataItem filter_func = pop(vm);
-    push(vm, obj);
+    DataItem filtered_arr = {ARRAY_TYPE, vm->asp++};
+    DataItem map_func = pop(vm);
+    DynamicArray arr = vm->array_storage[obj.value];
+
+    init_array(&vm->array_storage[filtered_arr.value], arr.capacity);
+    vm->array_storage[filtered_arr.value].type = arr.type;
+    for (int i = 0; i < arr.size; i++) {
+        DataItem arg = {arr.type, arr.items[i]};
+        push(vm, arg);
+        run_function(vm, map_func.value);
+        DataItem result = pop(vm);
+        if (result.value != 0)
+            append_array(&vm->array_storage[filtered_arr.value], arr.items[i]);
+    }
+
+    push(vm, filtered_arr);
 }
 
 void list_min(VM* vm, DataItem obj) {
@@ -247,7 +271,7 @@ void list_upper(VM* vm, DataItem obj) {
     }
 
     DataItem arr = {ARRAY_TYPE, vm->asp++};
-    create_array(&vm->array_storage[arr.value], 4);
+    init_array(&vm->array_storage[arr.value], 4);
     vm->array_storage[arr.value].type = CHAR_TYPE;
 
     for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
@@ -270,7 +294,7 @@ void list_lower(VM* vm, DataItem obj) {
     }
 
     DataItem arr = {ARRAY_TYPE, vm->asp++};
-    create_array(&vm->array_storage[arr.value], 4);
+    init_array(&vm->array_storage[arr.value], 4);
     vm->array_storage[arr.value].type = CHAR_TYPE;
 
     for (int i = 0; i < vm->array_storage[obj.value].size; i++) {
@@ -289,7 +313,7 @@ void list_lower(VM* vm, DataItem obj) {
 void list_to_string(VM* vm, DataItem obj) {
     DataItem arr_pos = {ARRAY_TYPE, vm->asp++};
     DynamicArray* converterd_arr = &vm->array_storage[arr_pos.value];
-    create_array(converterd_arr, 4);
+    init_array(converterd_arr, 4);
     converterd_arr->type = CHAR_TYPE;
 
     DynamicArray* arr = &vm->array_storage[obj.value];

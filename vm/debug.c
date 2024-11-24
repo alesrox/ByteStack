@@ -37,6 +37,26 @@ void show_vm_state(VM vm) {
         }
         if (i != vm.data_segment.pointer - 1) printf(", ");
     }
+    
+    if (vm.fp != 0) {
+        printf("]\nLocals: [");
+        for (int i = 0; i < vm.frames[vm.fp - 1].locals.pointer; i++) {
+            DataItem item = vm.frames[vm.fp - 1].locals.data[i];
+            printf("{%s, %d}", get_type[item.type], item.value);
+            if (item.type == ARRAY_TYPE) {
+                DynamicArray arr = vm.array_storage[item.value];
+                if (arr.type == CHAR_TYPE) printf(" -> \"");
+                else printf(" -> %s:[", get_type[arr.type]);
+                for (int i = 0; i < arr.size; i++) {
+                    built_in_subprint((DataItem){arr.type, arr.items[i]}, stdout);
+                    if (arr.type != CHAR_TYPE && i < arr.size - 1) printf(", ");
+                }
+                
+                printf((arr.type == CHAR_TYPE) ? "\"" : "]");
+            }
+            if (i != vm.frames[vm.fp - 1].locals.pointer - 1) printf(", ");
+        }
+    }
 
     printf("]\nFrame: %d", vm.fp);
     if (instr.opcode == 0xFF && instr.arg.value == 1) printf("\nOutput: ");

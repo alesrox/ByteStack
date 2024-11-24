@@ -62,6 +62,7 @@ typedef struct {
     int sp;  // stack pointer
     int fp;  // frame pointer
     int asp; // array storage pointer
+    int num_instr;
     Frame frames[RECURSION_LIMIT];
     DataItem stack[STACK_SIZE];
     Instruction *memory;
@@ -70,14 +71,15 @@ typedef struct {
 } VM;
 
 // Virtual Machine Control
-int load_program(VM *vm, const char *filename);
+void load_program(VM *vm, const char *filename);
 void throw_error(char *msg);
-void run(VM *vm, int size);
+void run(VM *vm);
 
 // VM Core
 DataItem pop(VM *vm);
 void push(VM *vm, DataItem value);
-void store_data(VM* vm, DataSegment *ds, int address, DataItem item);
+void store_data(VM *vm, DataSegment *ds, int address, DataItem item);
+void run_function(VM* vm, uint32_t func_id);
 void built_in_subprint(DataItem item, FILE *out);
 void built_in_print(VM *vm);
 void syscall(VM *vm, int arg);
@@ -92,8 +94,8 @@ uint32_t int_alu(VM *vm, uint32_t left, uint32_t right, uint8_t op);
 DataItem alu(VM *vm, DataItem left, DataItem right, uint8_t op);
 
 // Arrays Utils
-void array_assigment(VM* vm, int address, int item);
-void create_array(DynamicArray *array, int initial_capacity);
+void init_array(DynamicArray *array, int initial_capacity);
+void array_assigment(VM *vm, int address, int item);
 void resize_array(DynamicArray *array, int new_capacity);
 void append_array(DynamicArray *array, uint32_t value);
 void remove_at(DynamicArray *array, int index);
