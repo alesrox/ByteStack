@@ -32,14 +32,13 @@ void load_program(VM *vm, const char *filename) {
     vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
     vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
     vm->num_instr = num_instructions;
+    vm->array_storage = malloc(sizeof(DynamicArray) * 4);
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
         vm->memory[i].arg.type = UNASSIGNED_TYPE; 
         fread(&vm->memory[i].arg.value, sizeof(uint32_t), 1, file);
     }
-    // vm->memory[num_instructions].opcode = 0x00;
-    // vm->memory[num_instructions].arg = (DataItem){0, 0};
 
     fclose(file);
 
@@ -56,9 +55,9 @@ void run(VM *vm) {
         int address, index, array_access, aux, length;
 
         if (debuging) show_vm_state(*vm);
+        if (vm->asp % 4 == 0)
+            vm->array_storage = realloc(vm->array_storage, (vm->asp + 4) * sizeof(DynamicArray));
 
-        // printf("0x%02X - %d\n", instr.opcode, instr.arg.value);
-        // if (instr.opcode == 0x00) continue;
         if (instr.opcode < 0x0F) {
             right = (instr.opcode != 0x08) ? pop(vm) : (DataItem){0, 0};
             left = pop(vm);

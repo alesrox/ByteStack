@@ -1,5 +1,12 @@
 #include "virtual_machine.h"
 
+void init_array(DynamicArray *array, int initial_capacity) {
+    array->items = malloc(initial_capacity * sizeof(uint32_t));
+    array->capacity = initial_capacity;
+    array->type = UNASSIGNED_TYPE;
+    array->size = 0;
+}
+
 void array_assigment(VM* vm, int address, int item) {
     int arr_addres_type = vm->array_storage[address].type == ARRAY_TYPE;
     int arr_item_type = vm->array_storage[item].type == ARRAY_TYPE;
@@ -11,13 +18,6 @@ void array_assigment(VM* vm, int address, int item) {
         else vm->array_storage[item].type = vm->array_storage[address].type;
     else if (arr_addres_type) 
         throw_error(error_messages[ERR_BAD_TYPE]);
-}
-
-void init_array(DynamicArray *array, int initial_capacity) {
-    array->items = malloc(initial_capacity * sizeof(uint32_t));
-    array->capacity = initial_capacity;
-    array->type = UNASSIGNED_TYPE;
-    array->size = 0;
 }
 
 void resize_array(DynamicArray *array, int new_capacity) {

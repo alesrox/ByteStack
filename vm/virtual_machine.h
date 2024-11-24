@@ -67,7 +67,7 @@ typedef struct {
     DataItem stack[STACK_SIZE];
     Instruction *memory;
     DataSegment data_segment;
-    DynamicArray array_storage[1024];
+    DynamicArray* array_storage;
 } VM;
 
 // Virtual Machine Control
