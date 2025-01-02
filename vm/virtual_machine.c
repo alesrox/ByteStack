@@ -33,6 +33,8 @@ void load_program(VM *vm, const char *filename) {
     vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
     vm->num_instr = num_instructions;
     vm->array_storage = malloc(sizeof(DynamicArray) * 4);
+    vm->attr_stack = malloc(sizeof(DataType));
+    vm->type_table = malloc(sizeof(TypeDescriptor));
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
@@ -43,9 +45,11 @@ void load_program(VM *vm, const char *filename) {
     fclose(file);
 
     vm->pc = 0;
-    vm->sp = 0;
-    vm->fp = 0;
+    vm->stack_pointer = 0;
+    vm->frame_pointer = 0;
     vm->asp = 0;
+    vm->atp = 0;
+    vm->att = 0;
 }
 
 void run(VM *vm) {
@@ -90,16 +94,6 @@ void run(VM *vm) {
         }
 
         switch (instr.opcode) {
-            case 0x01: // ADD -> Only if some of one are an array -> WILL BE MODIFIED
-                if (right.type == ARRAY_TYPE && left.type == ARRAY_TYPE) {
-                    
-                } else /*if (right.type == ARRAY_TYPE ^ left.type == ARRAY_TYPE)*/ {
-                    
-                }
-
-                push(vm, result);
-                break;
-
             case 0x0F: // STORE
                 instr.arg.type = INT_TYPE;
                 push(vm, instr.arg);
@@ -129,17 +123,17 @@ void run(VM *vm) {
                 break;
             
             case 0x15: // CREATE_SCOPE
-                if (vm->fp >= RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+                if (vm->frame_pointer >= RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
 
-                vm->frames[vm->fp].locals.pointer = 0;
-                vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
-                vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->fp].locals.capacity);
-                vm->fp++;
+                vm->frames[vm->frame_pointer].locals.pointer = 0;
+                vm->frames[vm->frame_pointer].locals.capacity = MEMORY_SIZE;
+                vm->frames[vm->frame_pointer].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->frame_pointer].locals.capacity);
+                vm->frame_pointer++;
                 break;
             
             case 0x16: // DEL_SCOPE
-                free(vm->frames[vm->fp - 1].locals.data);
-                vm->fp--;
+                free(vm->frames[vm->frame_pointer - 1].locals.data);
+                vm->frame_pointer--;
                 break;
 
             case 0x17: // CALL
@@ -148,17 +142,17 @@ void run(VM *vm) {
 
             case 0x18: // STORE_LOCAL
                 result = pop(vm);
-                store_data(vm, &vm->frames[vm->fp - 1].locals, instr.arg.value, result);
+                store_data(vm, &vm->frames[vm->frame_pointer - 1].locals, instr.arg.value, result);
                 break;
             
             case 0x19: // LOAD_LOCAL
-                push(vm, vm->frames[vm->fp - 1].locals.data[instr.arg.value]);
+                push(vm, vm->frames[vm->frame_pointer - 1].locals.data[instr.arg.value]);
                 break;
             
             case 0x1A: // RETURN
-                free(vm->frames[vm->fp - 1].locals.data);
-                vm->pc = vm->frames[vm->fp - 1].return_address;
-                vm->fp--;
+                free(vm->frames[vm->frame_pointer - 1].locals.data);
+                vm->pc = vm->frames[vm->frame_pointer - 1].return_address;
+                vm->frame_pointer--;
                 return;
 
             case 0x1B: // BUILD_LIST
@@ -214,6 +208,45 @@ void run(VM *vm) {
             case 0x1F: // STORE_CHAR
                 instr.arg.type = CHAR_TYPE;
                 push(vm, instr.arg);
+                break;
+
+            case 0x20: // DEFINE_ATTR
+                vm->atp++;
+                vm->attr_stack = realloc(vm->attr_stack, vm->atp * sizeof(DataType));
+                vm->attr_stack[vm->atp - 1] = instr.arg.value;
+                break;
+            
+            case 0x21: // DEFINE_TYPE
+                address = vm->att++;
+                vm->type_table = realloc(vm->type_table, vm->att * sizeof(TypeDescriptor));
+                vm->type_table[address].id = address;
+                vm->type_table[address].num_attr = vm->atp;
+                vm->type_table[address].attributes = realloc(
+                    vm->type_table[address].attributes, vm->atp * sizeof(DataType)
+                );
+
+                for (int i = 0; i < vm->atp; i++)
+                    vm->type_table[address].attributes[i] = vm->attr_stack[i];
+                
+                vm->atp = 0;
+                //free(vm->attr_stack);
+                break;
+            
+            case 0x22: // NEW
+                address = vm->data_segment.pointer;
+                aux = instr.arg.value;
+                
+                DataSegment* segment;
+                if (vm->frame_pointer != 0)
+                    segment = &vm->frames[vm->frame_pointer - 1].locals;
+                else
+                    segment = &vm->data_segment;
+
+                for (int i = 0; i < vm->type_table[aux].num_attr; i++)
+                    store_data(vm, segment, -1, pop(vm));
+                
+                result = (DataItem){OBJ_TYPE, address};
+                store_data(vm, segment, -1, result);
                 break;
 
             case 0xFE: // OBJCALL

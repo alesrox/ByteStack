@@ -14,10 +14,10 @@ void show_vm_state(VM vm) {
         printf("PC: %d -> 0x%02X %d\n", vm.pc - 1, instr.opcode, instr.arg.value);
     
     printf("Stack: [");
-    for (int i = 0; i < vm.sp; i++) {
+    for (int i = 0; i < vm.stack_pointer; i++) {
         DataItem item = vm.stack[i];
         printf("{%s, %d}", get_type[item.type], item.value);
-        if (i != vm.sp - 1) printf(", ");
+        if (i != vm.stack_pointer - 1) printf(", ");
     }
 
     printf("]\nMemory: [");
@@ -38,10 +38,10 @@ void show_vm_state(VM vm) {
         if (i != vm.data_segment.pointer - 1) printf(", ");
     }
     
-    if (vm.fp != 0) {
+    if (vm.frame_pointer != 0) {
         printf("]\nLocals: [");
-        for (int i = 0; i < vm.frames[vm.fp - 1].locals.pointer; i++) {
-            DataItem item = vm.frames[vm.fp - 1].locals.data[i];
+        for (int i = 0; i < vm.frames[vm.frame_pointer - 1].locals.pointer; i++) {
+            DataItem item = vm.frames[vm.frame_pointer - 1].locals.data[i];
             printf("{%s, %d}", get_type[item.type], item.value);
             if (item.type == ARRAY_TYPE) {
                 DynamicArray arr = vm.array_storage[item.value];
@@ -54,11 +54,11 @@ void show_vm_state(VM vm) {
                 
                 printf((arr.type == CHAR_TYPE) ? "\"" : "]");
             }
-            if (i != vm.frames[vm.fp - 1].locals.pointer - 1) printf(", ");
+            if (i != vm.frames[vm.frame_pointer - 1].locals.pointer - 1) printf(", ");
         }
     }
 
-    printf("]\nFrame: %d", vm.fp);
+    printf("]\nFrame: %d", vm.frame_pointer);
     if (instr.opcode == 0xFF && instr.arg.value == 1) printf("\nOutput: ");
     if (instr.opcode == 0xFF && instr.arg.value == 2) printf("\nInput: ");
 }

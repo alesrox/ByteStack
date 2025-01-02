@@ -36,10 +36,14 @@ The compiler supports several flags for debugging and output customization:
 * -d: Export a human-readable version of the bytecode to output.txt.
 * -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
 
+## Next Step
+- Structs are implemented in the virtual machine, but the compiler does not translate them into bytecode (not implemented in the compiler).
+- Dictionaries or json-like-objects (like Python dicts).
+- Import statement.
+
 ## Future features to add
 - System control functions
 - Multi-file scripts (like import statement from python or java, or #include from C/C++/C#)
 - Trash collector for the Virtual Machine
-- OOP (Object-oriented Programming)
 - Something else in order to improve the language
 - Invalid Type Assignment Errors: Implementing checks in the parser to prevent the assignment of incompatible types, such as assigning a float literal to a string var.
