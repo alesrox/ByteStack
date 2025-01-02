@@ -365,6 +365,16 @@ void (*objfuncs[])(VM* vm, DataItem obj) = {
 };
 
 void objcall(VM *vm, int arg) {
-    if (arg > -1 && arg < 13) objfuncs[arg](vm, pop(vm));
+    DataItem obj = pop(vm);
+    DataSegment* segment;
+    if (vm->frame_pointer != 0)
+        segment = &vm->frames[vm->frame_pointer - 1].locals;
+    else
+        segment = &vm->data_segment;
+
+    if (obj.type == OBJ_TYPE) {
+        DataItem attr = segment->data[obj.value + (vm->type_table[obj.value].num_attr - arg - 1)];
+        push(vm, attr);
+    } else if (arg > -1 && arg < 13) objfuncs[arg](vm, obj);
     else printf("Unknown objcall: %d\n", arg);
 }

@@ -2,15 +2,15 @@
 #include <math.h>
 
 void push(VM *vm, DataItem value) {
-    if (vm->sp < STACK_SIZE)
-        vm->stack[vm->sp++] = value;
+    if (vm->stack_pointer < STACK_SIZE)
+        vm->stack[vm->stack_pointer++] = value;
 }
 
 DataItem pop(VM *vm) {
-    if (vm->sp == 0)
+    if (vm->stack_pointer == 0)
         throw_error(error_messages[ERR_EMPTY_STACK]);
 
-    return vm->stack[--vm->sp];
+    return vm->stack[--vm->stack_pointer];
 }
 
 void store_data(VM* vm, DataSegment *ds, int address, DataItem item) {
@@ -38,14 +38,14 @@ void store_data(VM* vm, DataSegment *ds, int address, DataItem item) {
 }
 
 void run_function(VM* vm, uint32_t func_id) {
-    if (vm->fp == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+    if (vm->frame_pointer == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
 
-    vm->frames[vm->fp].locals.pointer = 0;
-    vm->frames[vm->fp].locals.capacity = MEMORY_SIZE;
-    vm->frames[vm->fp].locals.data = malloc(sizeof(DataItem) * MEMORY_SIZE);
-    vm->frames[vm->fp].return_address = vm->pc;
+    vm->frames[vm->frame_pointer].locals.pointer = 0;
+    vm->frames[vm->frame_pointer].locals.capacity = MEMORY_SIZE;
+    vm->frames[vm->frame_pointer].locals.data = malloc(sizeof(DataItem) * MEMORY_SIZE);
+    vm->frames[vm->frame_pointer].return_address = vm->pc;
     vm->pc = func_id;
-    vm->fp++;
+    vm->frame_pointer++;
 
     run(vm);
 }

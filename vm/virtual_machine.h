@@ -26,7 +26,8 @@ typedef enum {
     INT_TYPE,
     FLOAT_TYPE,
     CHAR_TYPE,
-    ARRAY_TYPE
+    ARRAY_TYPE,
+    OBJ_TYPE
 } DataType;
 
 typedef struct {
@@ -58,16 +59,27 @@ typedef struct {
 } Frame;
 
 typedef struct {
-    int pc;  // program count
-    int sp;  // stack pointer
-    int fp;  // frame pointer
-    int asp; // array storage pointer
+    int id;
+    int num_attr;
+    DataType* attributes;
+} TypeDescriptor;
+
+typedef struct {
+    int pc;
     int num_instr;
-    Frame frames[RECURSION_LIMIT];
+    int stack_pointer;
+    int frame_pointer;
+    int asp; // array storage pointer
+
     DataItem stack[STACK_SIZE];
+    Frame frames[RECURSION_LIMIT];
     Instruction *memory;
     DataSegment data_segment;
     DynamicArray* array_storage;
+
+    int atp, att;
+    DataType* attr_stack;
+    TypeDescriptor* type_table;
 } VM;
 
 // Virtual Machine Control
