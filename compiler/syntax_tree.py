@@ -167,6 +167,18 @@ class FunctionCall(ASTNode):
             "args" : [arg.to_dict() for arg in self.args],
         }
     
+class Attribute(ASTNode):
+    def __init__(self, identifier, from_obj):
+        self.identifier = identifier
+        self.from_obj = from_obj
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "from_obj" : self.from_obj,
+            "identifier" : self.identifier,
+        }
+    
 class ReturnStatement(ASTNode):
     def __init__(self, value):
         self.value = value
@@ -178,11 +190,25 @@ class ReturnStatement(ASTNode):
         }
 
 class NewStatement(ASTNode):
-    def __init__(self, obj):
+    def __init__(self, obj, args):
         self.obj = obj
+        self.args = args
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "obj" : self.obj
+            "obj" : self.obj,
+            "args" : self.args
+        }
+
+class StructStatement(ASTNode):
+    def __init__(self, name, args):
+        self.name = name
+        self.args = args
+    
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "name" : self.name,
+            "args" : self.args
         }

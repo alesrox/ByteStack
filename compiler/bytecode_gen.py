@@ -8,6 +8,8 @@ class ByteCodeCompiler:
         self.bytecode = []
         self.identifiers = {}
         self.locals = {}
+        self.structs = {}
+        self.table_type = {}
 
     def append_bytecode(self, instruction: tuple):
         self.bytecode.append(instruction)
@@ -30,12 +32,25 @@ class ByteCodeCompiler:
                 else:
                     self.identifiers[node.identifier] = len(self.identifiers)
 
+            if isinstance(node.value, NewStatement):
+                self.identifiers[node.identifier] += self.structs[node.value.obj][1]
+                self.table_type[node.identifier] = node.value.obj
+
             self.add_instruction(node.value, scope)
             self.append_bytecode((bytecode_instructions["STORE_LOCAL" if scope else "STORE_MEM"], -1))
         elif isinstance(node, Assignment):
             self.add_instruction(node.value, scope)
 
-            if isinstance(node.identifier, ListNode):
+            if isinstance(node.identifier, Attribute):
+                _info = node.identifier.from_obj
+                info = self.structs[self.table_type[_info]]
+                i = 1
+                for attr in info[2]:
+                    if attr == node.identifier.identifier: break
+                    i += 1
+                
+                self.append_bytecode((bytecode_instructions["STORE_MEM"], self.identifiers[_info] - i))
+            elif isinstance(node.identifier, ListNode):
                 list_set = []
                 identifier = node.identifier.identifier
                 while isinstance(identifier, ListNode):
@@ -83,6 +98,16 @@ class ByteCodeCompiler:
             elif node.value_type == 'IDENTIFIER':
                 if isinstance(node.value, FunctionCall):
                     self.add_instruction(node.value, scope)
+                elif isinstance(node.value, Attribute):
+                    info = node.value.from_obj
+                    info = self.structs[self.table_type[info]]
+                    i = 0
+                    for attr in info[2]:
+                        if attr == node.value.identifier: break
+                        i += 1
+
+                    self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[node.value.from_obj]))
+                    self.append_bytecode((bytecode_instructions["OBJCALL"], i))
                 elif node.value in self.identifiers:
                     self.append_bytecode((bytecode_instructions["LOAD"], self.identifiers[node.value]))
                 elif node.value in self.locals and scope:
@@ -219,6 +244,31 @@ class ByteCodeCompiler:
                 else:
                     self.add_instruction(access, scope)
                     self.append_bytecode((bytecode_instructions["LIST_ACCESS"], -1))
+        elif isinstance(node, StructStatement):
+            self.structs[node.name] = [
+                len(self.structs), len(node.args), [arg.identifier for arg in node.args]
+            ]
+
+            aux = {"int" : 1, "float" : 2, "array" : 4, "obj": 5}
+            for arg in node.args:
+                if arg.var_type == "bool":
+                    arg.var_type = "int"
+                elif arg.var_type == "string" or "[]" in arg.var_type:
+                    arg.var_type = "array"
+                
+                if arg.var_type not in aux:
+                    arg.var_type = "obj"
+                
+                self.append_bytecode((bytecode_instructions["DEFINE_ATTR"], aux[arg.var_type]))
+            
+            self.append_bytecode((bytecode_instructions["DEFINE_TYPE"], self.structs[node.name][0]))
+
+        elif isinstance(node, NewStatement):
+            for arg in node.args:
+                self.identifiers[f"QWEMNB{len(self.identifiers)}"] = 0
+                self.add_instruction(arg)
+            
+            self.append_bytecode((bytecode_instructions["NEW"], self.structs[node.obj][0]))
 
     def get_bytecode(self):
         return self.bytecode.copy()
