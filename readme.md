@@ -37,7 +37,7 @@ The compiler supports several flags for debugging and output customization:
 * -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
 
 ## Next Step
-- Structs are implemented in the virtual machine, but the compiler does not translate them into bytecode (not implemented in the compiler).
+- Fix some bugs
 - Dictionaries or json-like-objects (like Python dicts).
 - Import statement.
 
