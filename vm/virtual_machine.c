@@ -246,7 +246,8 @@ void run(VM *vm) {
                     store_data(vm, segment, -1, pop(vm));
                 
                 result = (DataItem){OBJ_TYPE, address};
-                store_data(vm, segment, -1, result);
+                push(vm, result);
+                // store_data(vm, segment, -1, result);
                 break;
 
             case 0xFE: // OBJCALL
