@@ -1,0 +1,8 @@
+struct test {
+    int num1;
+    int num2;
+}
+
+let test obj = new test(10, 2);
+obj.num2 = 3;
+print(obj.num2);
