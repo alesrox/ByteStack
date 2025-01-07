@@ -260,7 +260,7 @@ class Parser:
                 result = Attribute(func_id, identifier)
                 if self.current_token.type == "ASSIGN":
                     self.next_token() # Consume '='
-                    return Assignment(result, self.expression())
+                    result = Assignment(result, self.expression())
 
             self.next_token() # Consume ';'
             return result
