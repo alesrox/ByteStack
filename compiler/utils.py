@@ -30,6 +30,9 @@ bytecode_instructions = {
     "LIST_SET"      : 0x1D,
     "BUILD_STR"     : 0x1E,
     "STORE_CHAR"    : 0x1F,
+    "DEFINE_ATTR"   : 0x20,
+    "DEFINE_TYPE"   : 0x21,
+    "NEW"           : 0x22,
     "OBJCALL"       : 0xFE,
     "SYSCALL"       : 0xFF
 }

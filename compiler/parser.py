@@ -49,6 +49,8 @@ class Parser:
                 return self.function_declaration()
             case 'RETURN':
                 return self.return_statement()
+            case 'STRUCT':
+                return self.struct_statement()
             case _:
                 self.throw_error(f"Unexpected Token: {self.current_token}")
 
@@ -91,7 +93,7 @@ class Parser:
             self.next_token() # Consume ')'
             return expr
 
-        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'BOOL_LITERAL', 'STRING_LITERAL', 'IDENTIFIER']:
+        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'BOOL_LITERAL', 'STRING_LITERAL', 'IDENTIFIER', 'NEW']:
             token = self.lexer.clone().token()
             if token.type in ('SEMICOLON', 'COMMA', 'END_LIST', 'RPAREN'):
                 literal_type, value = self.current_token.type, self.current_token.value
@@ -166,11 +168,27 @@ class Parser:
                 self.next_token() # Consume '.'
                 func_id = self.current_token.value
                 self.next_token() # Consume FUNC_NAME_TYPE
-                identifier = self.function_call(func_id, identifier)
+                if self.current_token.type == "LPAREN":
+                    identifier = self.function_call(func_id, identifier)
+                else:
+                    identifier = Attribute(func_id, identifier)
             elif self.current_token.type == 'LPAREN':
                 identifier = self.function_call(identifier)
             
             return Expression('IDENTIFIER', identifier)
+        elif self.current_token.type == "NEW":
+            self.next_token() # Consume 'NEW'
+            identifier = self.current_token
+            self.next_token()
+            arguments = []
+
+            while self.current_token.type != 'RPAREN':
+                self.next_token() # Consume '(' or ','
+                if self.current_token.type == 'RPAREN': break
+                arguments.append(self.expression())
+            
+            self.next_token() # Consume ')'
+            return NewStatement(identifier.value, arguments)
 
         self.throw_error(f"Unexpected expresion: {self.current_token}")
 
@@ -236,7 +254,14 @@ class Parser:
             self.next_token() # Consume '.'
             func_id = self.current_token.value
             self.next_token() # Consume FUNC_NAME_TYPE
-            result = self.function_call(func_id, identifier)
+            if self.current_token.type == "LPAREN":
+                result = self.function_call(func_id, identifier)
+            else:
+                result = Attribute(func_id, identifier)
+                if self.current_token.type == "ASSIGN":
+                    self.next_token() # Consume '='
+                    return Assignment(result, self.expression())
+
             self.next_token() # Consume ';'
             return result
         
@@ -369,3 +394,34 @@ class Parser:
         self.next_token() # Consume ')'
         # if self.current_token.type == 'SEMICOLON': self.next_token()
         return FunctionCall(identifier, arguments, from_obj)
+    
+    def struct_statement(self):
+        self.next_token() # Consume 'struct'
+
+        struct_name = self.current_token.value
+        self.next_token() # Consume STRUCT_INFO_NAME
+
+        if self.current_token.type != "LBRACE":
+            self.throw_error(f"Expected a '{'{'}' symbol but recived: {self.current_token}")
+        self.next_token()
+        
+        struct_elements = []
+        while self.current_token.type != "RBRACE":
+            _type = self.current_token.value
+            self.next_token() # Consume TYPE_VAR_INFO
+            if self.current_token.type == 'EMPTY_ARR': 
+                self.next_token() # Consume '[]'
+                var_type += '[]'
+
+            if self.current_token.type != 'IDENTIFIER':
+                self.throw_error(f"An Identifier was expected: {self.current_token}")
+            name = self.current_token.value
+            self.next_token()
+
+            if self.current_token.type != "SEMICOLON":
+                self.throw_error(f"A semicolon ';' was expected")
+            self.next_token() # Consume ';'
+            struct_elements.append(Declaration(_type, name, None))
+        
+        self.next_token() # Consume '}'
+        return StructStatement(struct_name, struct_elements)

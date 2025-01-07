@@ -36,6 +36,7 @@ keywords = {
     'or'        : 'OR',
     'not'       : 'NOT',
     'Array'     : 'ARRAY',
+    'struct'    : 'STRUCT',
 }
 
 tokens += list(keywords.values())
