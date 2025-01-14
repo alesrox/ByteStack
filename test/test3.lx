@@ -1,4 +1,4 @@
-let int[] list = [1, 2, 3, 57];
+int[] list = [1, 2, 3, 57];
 print("List: " + list.toString() + "\n");
 list.pop();
 list.append(40); 
@@ -6,18 +6,18 @@ list.remove(1);
 print("Modded list: " + list.toString() + "\n");
 print("Size list: " + list.size() + "\n");
 
-let [] matriz = [[1, 10], [3, 4]];
+[] matriz = [[1, 10], [3, 4]];
 matriz[0][1] = 2;
 print("Matriz: " + matriz.toString() + "\n");
 
-let [] empty_list = [];
+[] empty_list = [];
 if (empty_list.is_empty()) { print("It's empty\n"); } 
 else { print("It's not empty\n"); }
 
-let string hi = "Hello World!\n";
+string hi = "Hello World!\n";
 print(hi.slice(0, 5) + "\n"); // Hello
 
-let [] new_list = [23, 45, 12, 67, 34, 89, 56];
+[] new_list = [23, 45, 12, 67, 34, 89, 56];
 print("Min: " + new_list.min() + "\n"); // 12
 print("Max: " + new_list.max() + "\n"); // 89
 

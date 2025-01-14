@@ -1,16 +1,16 @@
-func multiply_by_2(int item) {
+func multiply_by_2(int item) -> int {
     return item * 2; 
 }
 
-func is_even(int item) {
+func is_even(int item) -> bool {
     return item % 2 == 0; 
 }
 
-func is_odd(int item) {
+func is_odd(int item) -> bool {
     return not is_even(item);
 }
 
-let int[] x = [1, 2, 3, 4];
+int[] x = [1, 2, 3, 4];
 print(x.map(multiply_by_2));
 print(x.filter(is_even));
 print(x.filter(is_odd));

@@ -1,5 +1,5 @@
 print("Enter a number: ");
-let int x = input();
+int x = input();
 
 if (x % 2 == 0) {
     print("Your number is even");
