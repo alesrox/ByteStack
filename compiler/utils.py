@@ -33,6 +33,7 @@ opcodes = {
     "DEFINE_TYPE"   : 0x20,
     "NEW"           : 0x21,
     "STORE_HEAP"    : 0x22,
+    "LOAD_HEAP"     : 0x23,
     "OBJCALL"       : 0xFE,
     "SYSCALL"       : 0xFF
 }
