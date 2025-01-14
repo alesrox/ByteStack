@@ -1,11 +1,11 @@
 import ply.lex as lex
 
 tokens = [
-    'NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL',
+    'INT_LITERAL', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL',
     'IDENTIFIER', 'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE', 'MOD', 'POW',
     'LPAREN', 'RPAREN', 'LBRACE', 'RBRACE', 'ASSIGN', 'SEMICOLON',
     'COMMA', 'EQ', 'NEQ', 'LT', 'GT', 'LE', 'GE',
-    'START_LIST', 'END_LIST', 'EMPTY_ARR', 'POINT'
+    'START_LIST', 'END_LIST', 'EMPTY_ARR', 'POINT', 'RET'
 ]
 
 # TODO: Constantes
@@ -16,7 +16,6 @@ keywords = {
     'else'      : 'ELSE',
     'elif'      : 'ELIF',
     'while'     : 'WHILE',
-    'do'        : 'DO',
     'for'       : 'FOR',
     'return'    : 'RETURN',
     'func'      : 'FUNC',
@@ -41,6 +40,7 @@ keywords = {
 
 tokens += list(keywords.values())
 
+t_RET = r'->'
 t_PLUS = r'\+'
 t_MINUS = r'-'
 t_MULTIPLY = r'\*'
@@ -71,7 +71,7 @@ def t_FLOAT_LITERAL(t):
     t.value = float(t.value)
     return t
 
-def t_NUMBER(t):
+def t_INT_LITERAL(t):
     r'-?\d+'
     t.value = int(t.value)
     return t

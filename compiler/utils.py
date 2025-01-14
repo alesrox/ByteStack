@@ -1,4 +1,4 @@
-bytecode_instructions = {
+opcodes = {
     "ADD"           : 0x01,
     "SUB"           : 0x02,
     "MUL"           : 0x03,
@@ -30,9 +30,9 @@ bytecode_instructions = {
     "LIST_SET"      : 0x1D,
     "BUILD_STR"     : 0x1E,
     "STORE_CHAR"    : 0x1F,
-    "DEFINE_ATTR"   : 0x20,
-    "DEFINE_TYPE"   : 0x21,
-    "NEW"           : 0x22,
+    "DEFINE_TYPE"   : 0x20,
+    "NEW"           : 0x21,
+    "STORE_HEAP"    : 0x22,
     "OBJCALL"       : 0xFE,
     "SYSCALL"       : 0xFF
 }
@@ -43,6 +43,8 @@ operations = {
     '==': "EQ", '!=': "NEQ", 
     '<': "LT", '<=': "LE", '>': "GT", '>=': "GE",
 }
+
+literals = ['INT_LITERAL', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL']
 
 built_in_funcs = {
     'exit'  : 0,    
