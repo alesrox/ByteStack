@@ -1,130 +1,72 @@
 from syntax_tree import *
+from utils import literals
+from semantic_analyzer import Semantic
 
 class Parser:
     def __init__(self, lexer):
         self.lexer = lexer
         self.current_token = None
+        self.semantic = Semantic()
         self.next_token()
     
     def next_token(self):
         self.current_token = self.lexer.token()
     
-    def parser(self) -> Program:
-        if not self.lexer:
-            raise Exception()
-
-        return self.program()
-    
-    def throw_error(self, msg: str):
+    def throw_error(self, msg: str=None):
         token = self.current_token
         raise Exception(f"Compilation Error on line {token.lineno} and lexpos {token.lexpos}: {msg}")
-        exit()
     
-    def program(self) -> Program:
+    def get_program(self) -> BlockNode:
         statements = []
         while self.current_token:
             item = self.statements()
             if item:
                 statements.append(item)
         
-        return Program(statements)
+        return BlockNode(statements)
 
     def statements(self) -> ASTNode:
+        if self.current_token.type in self.semantic.types_register or self.current_token.value in self.semantic.types_register:
+            return self.variable_declaration()
+
         match self.current_token.type:
-            case 'LET':
-                return self.declaration()
+            case 'LBRACE':
+                return self.block()
+            case 'FUNC':
+                return self.function_declaration()
+            case 'STRUCT':
+                return self.struct_declaration()
             case 'IDENTIFIER':
-                return self.identifier()
+                return self.assign_statement()
             case 'IF':
                 return self.if_statement()
             case 'FOR':
                 return self.for_statement()
             case 'WHILE':
                 return self.while_statement()
-            case 'DO':
-                return self.while_statement()
-            case 'LBRACE':
-                return self.block()
-            case 'FUNC':
-                return self.function_declaration()
             case 'RETURN':
                 return self.return_statement()
-            case 'STRUCT':
-                return self.struct_statement()
             case _:
                 self.throw_error(f"Unexpected Token: {self.current_token}")
 
     def block(self):
-        if self.current_token.type != 'LBRACE':
-            self.throw_error(f"Expected a '{'{'}' symbol: {self.current_token}")
-
-        self.next_token()  # Consume '{'
+        self.next_token() # Consume '{'
 
         statements = []
-        while self.current_token and self.current_token.type != 'RBRACE':
+        while self.current_token.type != 'RBRACE':
             statements.append(self.statements())
-
-        self.next_token()  # Consume '}'
-        return Program(statements)
         
-    def list_expresion(self):
-        if self.current_token.type == 'EMPTY_ARR':
-            self.next_token() # Consume '[]'
-            return []
-        
-        items = []
-        while self.current_token.type != 'END_LIST':
-            self.next_token() # Consume '[' or ','
-            items.append(self.expression())
-        
-        self.next_token() # Consume ']'
-        return items
+        self.next_token() # Consume '}'
+        return BlockNode(statements)
 
     def expression(self):
-        if self.current_token.type in ('START_LIST', 'EMPTY_ARR'):
-            return self.list_expresion()
-
-        if self.current_token.type == "LPAREN":
-            self.next_token() # Consume ')'
-            expr = self.binary_expression()
-            if self.current_token.type != 'RPAREN':
-                self.throw_error(f"Expected a ')' symbol: {self.current_token}")
-
-            self.next_token() # Consume ')'
-            return expr
-
-        if self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'BOOL_LITERAL', 'STRING_LITERAL', 'IDENTIFIER', 'NEW']:
-            token = self.lexer.clone().token()
-            if token.type in ('SEMICOLON', 'COMMA', 'END_LIST', 'RPAREN'):
-                literal_type, value = self.current_token.type, self.current_token.value
-                self.next_token()
-                return Expression(literal_type,  value)
-            elif self.current_token.type == 'IDENTIFIER' and token.type == 'START_LIST':
-                token = self.current_token
-                self.next_token() # Consume VAR_NAME_INFO
-                self.next_token() # Consume '['
-                index = self.expression()
-                self.next_token() # Consume ']'
-
-                identifier = ListNode(token.value, index)
-                while self.current_token.type == 'START_LIST':
-                    self.next_token() # Consume '['
-                    index = self.expression()
-                    self.next_token() # Conusme ']'
-                    identifier = ListNode(identifier, index)
-
-                return identifier
-
-            expr = self.binary_expression()
-            return expr
-
-        elif self.current_token and self.current_token.type == 'NOT':
+        if self.current_token and self.current_token.type == 'NOT':
             operator = self.current_token.value
             self.next_token()
             operand = self.binary_expression()
             return BinaryExpression(operator, operand, None)
         
-        self.throw_error(f"Unexpected Token: {self.current_token}")
+        return self.binary_expression()
 
     def binary_expression(self, operator_group: int = 0):
         operators = (
@@ -136,7 +78,7 @@ class Parser:
         )
 
         if operator_group == len(operators):
-            return self.literal_expression()
+            return self.unary_expression()
 
         left = self.binary_expression(operator_group + 1)
 
@@ -148,122 +90,207 @@ class Parser:
 
         return left
     
-    def literal_expression(self):
-        if self.current_token and self.current_token.type == 'LPAREN':
+    def unary_expression(self):
+        if self.current_token.type == 'EMPTY_ARR':
+            self.next_token() # Consume '[]'
+            return Literal('[]', [])
+
+        if self.current_token.type == 'START_LIST':
+            new_list = []
+            while self.current_token.type != 'END_LIST':
+                self.next_token() # Consume '[' or ','
+                new_list.append(self.expression())
+
+            self.next_token() # Consume ']'
+            return Literal('[]', new_list)
+
+        if self.current_token.type == 'LPAREN':
             self.next_token()  # Consume '('
             expr = self.binary_expression()
             if not self.current_token or self.current_token.type != 'RPAREN':
-                self.throw_error("Expected ')'")
+                self.throw_error("Expected a ')'")
 
-            self.next_token()
+            self.next_token() # Consume ')'
             return expr
-        elif self.current_token.type in ['NUMBER', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL']:
+        
+        if self.current_token.type == 'NEW':
+            self.next_token() # Consume 'new'
+            return self.new_call()
+
+        if self.current_token.type in literals:
             token = self.current_token
             self.next_token()
-            return Expression(token.type, token.value)
-        elif self.current_token.type == 'IDENTIFIER':
-            identifier = self.current_token.value
-            self.next_token()
-            if self.current_token.type == 'POINT':
-                self.next_token() # Consume '.'
-                func_id = self.current_token.value
-                self.next_token() # Consume FUNC_NAME_TYPE
-                if self.current_token.type == "LPAREN":
-                    identifier = self.function_call(func_id, identifier)
-                else:
-                    identifier = Attribute(func_id, identifier)
-            elif self.current_token.type == 'LPAREN':
-                identifier = self.function_call(identifier)
-            
-            return Expression('IDENTIFIER', identifier)
-        elif self.current_token.type == "NEW":
-            self.next_token() # Consume 'NEW'
-            identifier = self.current_token
-            self.next_token()
-            arguments = []
+            return Literal(token.type, token.value)
+        
+        identifier = self.current_token.value
+        self.next_token() # Consume VAR_INFO_NAME
+        if self.current_token.type == 'LPAREN':
+            return self.function_call(identifier)
+        elif self.current_token.type != 'POINT':
+            return Literal('VARIABLE', identifier)
+        
+        self.next_token() # Consume '.'
+        access_attr = self.current_token.value
+        self.next_token()
 
-            while self.current_token.type != 'RPAREN':
-                self.next_token() # Consume '(' or ','
-                if self.current_token.type == 'RPAREN': break
-                arguments.append(self.expression())
-            
-            self.next_token() # Consume ')'
-            return NewStatement(identifier.value, arguments)
+        if self.current_token.type != 'LPAREN':
+            return MemberAccess(identifier, access_attr)
+        
+        return self.function_call(access_attr, identifier)
 
-        self.throw_error(f"Unexpected expresion: {self.current_token}")
+    def new_call(self):
+        struct_name = self.current_token.value
+        self.next_token() # Consume STRUCT_NAME_INFO
 
-    def declaration(self):
-        self.next_token() # Consume 'LET'
-        var_type = self.current_token.value
+        arguments = []
+
+        while self.current_token.type != 'RPAREN':
+            self.next_token() # Consume '(' or ','
+            if self.current_token.type == 'COMMA': self.throw_error('Wrong argmuents') # TODO: Improve error msg
+            arguments.append(self.expression())
+        
+        self.next_token() # Consume ')'
+
+        return NewCall(struct_name, arguments)
+    
+    def function_call(self, func_id, from_obj = 'System'):
+        arguments = []
+
+        while self.current_token.type != 'RPAREN':
+            self.next_token() # Consume '(' or ','
+            if self.current_token.type == 'RPAREN': break # No args funcs
+            if self.current_token.type == 'COMMA': self.throw_error('Wrong argmuents') # TODO: Improve error msg
+            arguments.append(self.expression())
+        
+        self.next_token() # Consume ')'
+        # if self.current_token.type == 'SEMICOLON': self.next_token()
+        return FunctionCall(func_id, arguments, from_obj)
+
+    def variable_declaration(self):
+        var_type = self.current_token.type
+        if var_type == 'EMPTY_ARR': var_type = '[]'
         self.next_token() # Consume VAR_TYPE_INFO
         if self.current_token.type == 'EMPTY_ARR': 
             self.next_token() # Consume '[]'
             var_type += '[]'
-        
-        if self.current_token.type != 'IDENTIFIER':
-            self.throw_error(f"An Identifier was expected: {self.current_token}")
-        
-        identifier = self.current_token.value
+
+        var_name = self.current_token.value
         self.next_token() # Consume VAR_NAME_INFO
-
+        
+        self.semantic.add_table_type(var_name, var_type)
         if self.current_token.type == 'SEMICOLON':
-            self.next_token()
-            value = [] if ('[]' in var_type) else (0 if var_type != "string" else "")
-            value_type = "[]" if ('[]' in var_type) else ("NUMBER" if var_type != "string" else "STRING_LITERAL")
-            expression = Expression(value_type, value) if ('[]' not in var_type) else []
-            return Declaration(var_type, identifier, expression)
-
+            self.next_token() # Consume ';'
+            return VariableDeclaration(var_name, var_type)
+        
         if self.current_token.type != 'ASSIGN':
-            self.throw_error("Expected an equal symbol")
+            self.throw_error(f'{self.current_token}')
         
         self.next_token() # Consume '='
-
         value = self.expression()
-        if ('[]' in var_type) and not isinstance(value, list):
-            self.throw_error("An array was expected")
-
         self.next_token() # Consume ';'
-        return Declaration(var_type, identifier, value)
+        self.semantic.check_declaration(var_name, value)
+        return VariableDeclaration(var_name, var_type, value)
     
-    def identifier(self):
+    def function_declaration(self):
+        self.next_token() # Consume 'FUNC'
+        func_name = self.current_token.value
+        self.next_token() # Consume VAR_NAME_INFO
+
+        arguments = []
+        if self.current_token.type != 'LPAREN':
+            self.throw_error(f"Excpected a '(' symbol: {self.current_token}")
+        
+        while self.current_token.type != 'RPAREN':
+            self.next_token() # Consume '(' o ','
+            
+            arg_type = self.current_token.type
+            self.next_token() # LITERAL_TYPE_INFO
+            arguments.append(
+                ParameterNode(arg_type, self.current_token.value)
+            )
+    
+            self.next_token() # VAR_NAME_INFO
+
+        self.next_token() # Consume ')'
+        return_type = 'VOID'
+        if self.current_token.type == 'RET':
+            self.next_token() # Consume '->'
+            return_type = self.current_token.type
+            self.next_token() # Conseume RETURN_TYPE_INFO
+        
+        self.semantic.add_table_type(func_name, return_type)
+        return FunctionDeclaration(func_name, return_type, arguments, self.block())
+    
+    def struct_declaration(self):
+        self.next_token() # Consume 'struct'
+        struct_name = self.current_token.value
+        self.semantic.add_type(struct_name)
+        self.next_token() # Consume STRUCT_INFO_NAME
+
+        if self.current_token.type != "LBRACE":
+            self.throw_error(f"Expected a '{'{'}' symbol but recived: {self.current_token}")
+        self.next_token()
+
+        struct_elements = []
+        while self.current_token.type != "RBRACE":
+            _type = self.current_token.value
+            self.next_token() # Consume TYPE_VAR_INFO
+            if self.current_token.type == 'EMPTY_ARR': 
+                self.next_token() # Consume '[]'
+                var_type += '[]'
+
+            if self.current_token.type != 'IDENTIFIER':
+                self.throw_error(f"An Identifier was expected: {self.current_token}")
+            identifier = self.current_token.value
+            self.next_token()
+
+            if self.current_token.type != "SEMICOLON":
+                self.throw_error(f"A semicolon ';' was expected")
+            self.next_token() # Consume ';'
+            struct_elements.append(ParameterNode(_type, identifier))
+        
+        self.next_token() # Consume '}'
+        return ClassDeclaration(struct_name, struct_elements)
+    
+    def assign_statement(self):
         identifier = self.current_token.value
         self.next_token() # Consume VAR_NAME_INFO
 
         if self.current_token.type == 'START_LIST':
             self.next_token() # Consume '['
+
             index = self.expression()
 
             if self.current_token.type != 'END_LIST':
                 self.throw_error(f"Expected an ']' symbol: {self.current_token}")
             self.next_token() # Consume ']'
 
-            identifier = ListNode(identifier, index)
+            identifier = MemberAccess(identifier, index, True)
+
             while self.current_token.type == 'START_LIST':
                 self.next_token() # Consume '['
                 index = self.expression()
                 self.next_token() # Conusme ']'
-                identifier = ListNode(identifier, index)
+                identifier = MemberAccess(identifier, index, True)
 
             if self.current_token.type == 'ASSIGN':
                 self.next_token() # Consume '='
                 value = self.expression()
                 self.next_token() # Consume ';'
-                return Assignment(identifier, value)
+                self.semantic.check_assigment(identifier, value)
+                return AssignmentNode(identifier, value)
             
         if self.current_token.type == 'POINT':
             self.next_token() # Consume '.'
-            func_id = self.current_token.value
-            self.next_token() # Consume FUNC_NAME_TYPE
-            if self.current_token.type == "LPAREN":
-                result = self.function_call(func_id, identifier)
-            else:
-                result = Attribute(func_id, identifier)
-                if self.current_token.type == "ASSIGN":
-                    self.next_token() # Consume '='
-                    result = Assignment(result, self.expression())
+            access_attr = self.current_token.value
+            self.next_token()
 
-            self.next_token() # Consume ';'
-            return result
+            if self.current_token.type != 'LPAREN':
+                identifier = MemberAccess(identifier, access_attr)
+            else:
+                result = self.function_call(access_attr, identifier)
+                self.next_token() # Consume ';'
+                return result
         
         if self.current_token.type == 'LPAREN':
             function_call = self.function_call(identifier)
@@ -276,7 +303,8 @@ class Parser:
 
         value = self.expression()
         self.next_token() # Consume ';'
-        return Assignment(identifier, value)
+        self.semantic.check_assigment(identifier, value)
+        return AssignmentNode(identifier, value)
     
     def if_statement(self):
         self.next_token() # Consume 'if'
@@ -288,7 +316,7 @@ class Parser:
         condition = self.expression()
         self.next_token() # Consume ')'
 
-        true_block = self.block()
+        then_block = self.block()
         elif_statements = []
         else_block = None
 
@@ -302,126 +330,45 @@ class Parser:
             self.next_token()  # Consume 'else'
             else_block = self.block()  # else block
 
-        return IfStatement(condition, true_block, elif_statements, else_block)
+        return IfStatement(condition, then_block, elif_statements, else_block)
+
+    def while_statement(self):
+        while_condition = None
+        self.next_token() # Consume 'While'
+
+        if self.current_token.type != 'LPAREN':
+            self.throw_error(f"Expected a '(' symbol: {self.current_token}")
+
+        self.next_token() # Consume '('
+        while_condition = self.expression()
+        self.next_token() # Consume ')'
+
+        while_body = self.block()
+        return WhileStatement(while_condition, while_body)
 
     def for_statement(self):
         self.next_token() # Consume 'for'
 
         if self.current_token.type != 'LPAREN':
             self.throw_error("Expected a '(' symbol")
+
         self.next_token() # Consume '('
-        
         for_var = None
-        if self.current_token.type == 'LET':
-            for_var = self.declaration()
+        if self.current_token.type in self.semantic.types_register:
+            for_var = self.variable_declaration()
         elif self.current_token.type == 'IDENTIFIER':
             for_var = self.identifier()
         else:
-            self.throw_error(f'Expected a For Identifier Var: {self.current_token}')
+            self.throw_error(f'Expected a For Identifier Variable: {self.current_token}')
 
         for_condition = self.expression()
         self.next_token() # Consume ')'
 
         for_body = self.block()
-        return ForStatement(for_var, for_condition, for_body)
+        return ForStatement(for_var, for_condition, None, for_body)
 
-    def while_statement(self):
-        while_condition = None
-        is_a_do_while = self.current_token.type == 'DO'
-        self.next_token() # Consume 'While' or 'Do'
-
-        if not is_a_do_while:
-            if self.current_token.type != 'LPAREN':
-                self.throw_error(f"Expected a '(' symbol: {self.current_token}")
-            self.next_token() # Consume '('
-            while_condition = self.expression()
-            self.next_token() # Consume ')'
-
-        while_body = self.block()
-
-        if is_a_do_while:
-            if self.current_token.type != 'WHILE':
-                self.throw_error('Expected a while condition')
-
-            self.next_token() # Consume 'While'
-            self.next_token() # Consume '('
-            while_condition = self.expression()
-            self.next_token() # Consume ')'
-
-            if self.current_token.type != 'SEMICOLON': 
-                self.throw_error("Expected a ';' symbol")
-            
-            self.next_token()
-        return WhileStatement(while_condition, while_body, is_a_do_while)
-    
     def return_statement(self):
-        self.next_token() # Consume 'Return'
+        self.next_token() # Consume 'return'
         expression = self.expression()
         self.next_token() # Consume ';'
         return ReturnStatement(expression)
-
-    def function_declaration(self):
-        self.next_token() # Consume 'func'
-        identifier = self.current_token.value
-        self.next_token() # Consume VAR_NAME_INFO
-
-        arguments = []
-        if self.current_token.type != 'LPAREN':
-            self.throw_error(f"Excpected a '(' symbol: {self.current_token}")
-
-        while self.current_token.type != 'RPAREN':
-            self.next_token() # Consume '(' o ','
-            
-            arg_type = self.current_token.type
-            self.next_token() # LITERAL_TYPE_INFO
-            arguments.append(
-                Argument(arg_type, self.current_token.value)
-            )
-    
-            self.next_token() # VAR_NAME_INFO
-
-        self.next_token() # Consume ')'
-        return FunctionDeclaration(identifier, arguments, self.block())
-    
-    def function_call(self, identifier, from_obj = 'System'):
-        arguments = []
-
-        while self.current_token.type != 'RPAREN':
-            self.next_token() # Consume '(' or ','
-            if self.current_token.type == 'RPAREN': break
-            arguments.append(self.expression())
-        
-        self.next_token() # Consume ')'
-        # if self.current_token.type == 'SEMICOLON': self.next_token()
-        return FunctionCall(identifier, arguments, from_obj)
-    
-    def struct_statement(self):
-        self.next_token() # Consume 'struct'
-
-        struct_name = self.current_token.value
-        self.next_token() # Consume STRUCT_INFO_NAME
-
-        if self.current_token.type != "LBRACE":
-            self.throw_error(f"Expected a '{'{'}' symbol but recived: {self.current_token}")
-        self.next_token()
-        
-        struct_elements = []
-        while self.current_token.type != "RBRACE":
-            _type = self.current_token.value
-            self.next_token() # Consume TYPE_VAR_INFO
-            if self.current_token.type == 'EMPTY_ARR': 
-                self.next_token() # Consume '[]'
-                var_type += '[]'
-
-            if self.current_token.type != 'IDENTIFIER':
-                self.throw_error(f"An Identifier was expected: {self.current_token}")
-            name = self.current_token.value
-            self.next_token()
-
-            if self.current_token.type != "SEMICOLON":
-                self.throw_error(f"A semicolon ';' was expected")
-            self.next_token() # Consume ';'
-            struct_elements.append(Declaration(_type, name, None))
-        
-        self.next_token() # Consume '}'
-        return StructStatement(struct_name, struct_elements)

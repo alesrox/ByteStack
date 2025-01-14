@@ -1,11 +1,13 @@
 import sys
 import struct
-from tools import *
+import tools
+from utils import opcodes
 from lexer import lexer
 from parser import Parser
-from bytecode_gen import ByteCodeCompiler, bytecode_instructions
+from bytecode_gen import ByteCodeCompiler
 
 if __name__ == "__main__":
+    sys.tracebacklimit = 0
     if len(sys.argv) < 2: raise Exception("File to compile is needed")
 
     file = open(sys.argv[1])
@@ -22,13 +24,13 @@ if __name__ == "__main__":
     data = file.read()
     lexer.input(data)
     if only_lexer:
-        pretty_print(list(lexer))
+        tools.pretty_print(list(lexer))
         exit()
 
     parser = Parser(lexer)
-    ast = parser.program()
+    ast = parser.get_program()
     if only_parser:
-        pretty_print(ast.to_dict())
+        tools.pretty_print(ast.to_dict())
         exit()
     
     compiler = ByteCodeCompiler()
@@ -39,7 +41,7 @@ if __name__ == "__main__":
             for element in compiler.get_bytecode():
                 instr = element[0]
                 arg = element[1]
-                instr = get_key(bytecode_instructions, instr) if bytecode_doc else str(instr)
+                instr = tools.get_key(opcodes, instr) if bytecode_doc else str(instr)
                 file.write(instr)
                 file.write(f" {arg}\n")
         exit()

@@ -1,10 +1,10 @@
 class ASTNode:
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {"type": self.__class__.__name__}
 
-class Program(ASTNode):
-    def __init__(self, statements: list):
-        self.statements : list = statements
+class BlockNode(ASTNode):
+    def __init__(self, statements: list[ASTNode]):
+        self.statements: list = statements
 
     def to_dict(self) -> dict:
         return {
@@ -12,20 +12,54 @@ class Program(ASTNode):
             "statements": [statement.to_dict() if statement else None for statement in self.statements]
         }
 
-class ListNode(ASTNode):
-    def __init__(self, identifier, index):
-        self.identifier = identifier
-        self.index = index
+class TypeNode(ASTNode):
+    def __init__(self, name):
+        super().__init__()
+        self.name = name
+
+    def to_dict(self) -> dict:
+        return {
+            # **super().to_dict(),
+            "primitive type" : self.name
+        }
+
+class ExpressionNode(ASTNode):
+    def __init__(self, expression_type: str):
+        self.expression_type = expression_type
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "identifier": self.identifier,
-            "index": self.index
         }
 
-class Expression(ASTNode):
-    def __init__(self, value_type, value):
+class BinaryExpression(ExpressionNode):
+    def __init__(self, operator: str, right: ExpressionNode, left: ExpressionNode):
+        super().__init__('Binary Expression')
+        self.operator = operator
+        self.right = right
+        self.left = left
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "operator": self.operator,
+            "right": self.right.to_dict(),
+            "left": self.left.to_dict()
+        }
+
+class UnaryExpressionNode(ExpressionNode):
+    def __init__(self, unary_expression_type: str):
+        super().__init__('Unary Expression')
+        self.unary_expression_type = unary_expression_type
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+        }
+
+class Literal(UnaryExpressionNode):
+    def __init__(self, value_type: TypeNode, value):
+        super().__init__('Literal')
         self.value_type = value_type
         self.value = value
 
@@ -36,179 +70,202 @@ class Expression(ASTNode):
             "value": self.value
         }
 
-class BinaryExpression(ASTNode):
-    def __init__(self, operator: str, left, right):
-        self.operator: str = operator
-        self.left = left
-        self.right = right
+class FunctionCall(UnaryExpressionNode):
+    def __init__(self, identifier: str, args: list[ExpressionNode], from_obj: str = 'System'):
+        super().__init__('Function Call')
+        self.identifier = identifier
+        self.args = args
+        self.from_obj = from_obj
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "operator": self.operator,
-            "left": self.left.to_dict() if isinstance(self.left, ASTNode) else self.left,
-            "right": self.right.to_dict() if isinstance(self.right, ASTNode) else self.right
+            "identifier": self.identifier,
+            "args": [arg.to_dict() for arg in self.args],
+            "from_obj": self.from_obj
         }
 
-class Declaration(ASTNode):
-    def __init__(self, var_type: str, identifier: str, value):
-        self.var_type: str = var_type
-        self.identifier: str = identifier
-        self.value = value
+class NewCall(UnaryExpressionNode):
+    def __init__(self, identifier: str, args: list[ExpressionNode]):
+        super().__init__('Function Call')
+        self.struct = identifier
+        self.args = args
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "struct": self.struct,
+            "args": [arg.to_dict() for arg in self.args],
+        }
+
+class MemberAccess(UnaryExpressionNode):
+    def __init__(self, obj: str, attribute: any, list_access: bool = False):
+        super().__init__('Member Access')
+        self.object = obj
+        self.attribute = attribute
+        self.list_access = list_access
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "object": self.object,
+            "attribute": self.attribute
+        }
+
+class DeclarationNode(ASTNode):
+    def __init__(self, obj_declarated, identifier: str):
+        self.obj_declarated = obj_declarated
+        self.identifier = identifier
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "identifier": self.identifier,
+        }
+
+class VariableDeclaration(DeclarationNode):
+    def __init__(self, identifier: str, var_type: TypeNode, initializer: ExpressionNode = None):
+        super().__init__('Variable', identifier)
+        self.var_type = var_type
+        self.initializer = initializer
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
             "var_type": self.var_type,
+            "initializer": self.initializer.to_dict() if isinstance(self.initializer, ASTNode) else self.initializer
+        }
+
+class ParameterNode(ASTNode):
+    def __init__(self, p_type: TypeNode, identifier: str):
+        self.type = p_type
+        self.identifier = identifier
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "type": self.type,
             "identifier": self.identifier,
-            "value": self.value.to_dict() if isinstance(self.value, ASTNode) else self.value
         }
 
-class Assignment(ASTNode):
-    def __init__(self, identifier, value: ASTNode):
-        self.identifier: str = identifier
-        self.value: ASTNode = value
+class FunctionDeclaration(DeclarationNode):
+    def __init__(self, identifier: str, return_type: TypeNode, parameters: list[ParameterNode], body: BlockNode):
+        super().__init__('Function', identifier)
+        self.return_type = return_type
+        self.parameters = parameters
+        self.body = body
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "identifier": 
-                self.identifier.to_dict() if isinstance(self.identifier, ASTNode) else self.identifier,
-            "value": self.value.to_dict() if isinstance(self.value, ASTNode) else self.value
+            "return_type": self.return_type,
+            "parameters": [param.to_dict() for param in self.parameters],
+            "body": self.body.to_dict() if self.body else None
         }
 
-class IfStatement(ASTNode):
-    def __init__(self, condition: Expression, true_block: Program, else_if_statements: list=None, else_block: Program=None):
-        self.condition: Expression = condition
-        self.true_block: Program = true_block
-        self.elif_statements: list[IfStatement] = else_if_statements or []
-        self.else_block: Program = else_block
-
-    def to_dict(self) -> dict:
-        new_dict = { 
-            **super().to_dict(),
-            "condition": self.condition.to_dict(),
-            "true_block": self.true_block.to_dict(),
-        }
-
-        if self.elif_statements:
-            new_dict["elif_statements"] = [elif_stmt.to_dict() for elif_stmt in self.elif_statements]
-
-        if self.else_block:
-            new_dict["else_block"] = self.else_block.to_dict()
-        
-        return new_dict
-    
-class ForStatement(ASTNode):
-    def __init__(self, var, condition: Expression, block: Program):
-        self.var = var
-        self.condition: Expression = condition
-        self.block: Program = block
+class ClassDeclaration(DeclarationNode):
+    def __init__(self, identifier: str, attr: list[ParameterNode]):
+        super().__init__('Struct', identifier)
+        self.attributes = attr
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "var": self.var.to_dict(),
-            "condition": self.condition.to_dict(),
-            "statements": self.block.to_dict()
+            "identifier": self.identifier,
+            "attributes": [attr.to_dict() for attr in self.attributes]
         }
 
-class WhileStatement(ASTNode):
-    def __init__(self, condition: Expression, block: Program, is_a_do_while: bool = False):
-        self.is_a_do_while: bool = is_a_do_while
-        self.condition: Expression = condition
-        self.block: Program = block
+class StatementNode(ASTNode):
+    def __init__(self, statement):
+        super().__init__()
+        self.statement = statement
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "do_while": self.is_a_do_while,
-            "condition": self.condition.to_dict(),
-            "statements": self.block.to_dict()
         }
 
-class Argument(ASTNode):
-    def __init__(self, arg_type, identifier):
-        self.arg_type = arg_type
+class AssignmentNode(StatementNode):
+    def __init__(self, identifier: str, value: ExpressionNode):
+        super().__init__("Assignment")
         self.identifier = identifier
-    
-    def to_dict(self) -> dict:
-        return {
-            **super().to_dict(),
-            "type": self.arg_type,
-            "identifier": self.identifier
-        }
-
-class FunctionDeclaration(ASTNode):
-    def __init__(self, identifier, args: Argument, block: Program):
-        self.identifier = identifier
-        self.args = args
-        self.block = block
-
-    def to_dict(self) -> dict:
-        return {
-            **super().to_dict(),
-            "identifier" : self.identifier,
-            "args" : [arg.to_dict() for arg in self.args],
-            "body" : self.block.to_dict()
-        }
-
-class FunctionCall(ASTNode):
-    def __init__(self, identifier, args, from_obj):
-        self.identifier = identifier
-        self.args = args
-        self.from_obj = from_obj
-
-    def to_dict(self) -> dict:
-        return {
-            **super().to_dict(),
-            "from" : self.from_obj,
-            "identifier" : self.identifier,
-            "args" : [arg.to_dict() for arg in self.args],
-        }
-    
-class Attribute(ASTNode):
-    def __init__(self, identifier, from_obj):
-        self.identifier = identifier
-        self.from_obj = from_obj
-
-    def to_dict(self) -> dict:
-        return {
-            **super().to_dict(),
-            "from_obj" : self.from_obj,
-            "identifier" : self.identifier,
-        }
-    
-class ReturnStatement(ASTNode):
-    def __init__(self, value):
         self.value = value
     
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "value" : self.value.to_dict()
+            "identifier": self.identifier,
+            "value": self.value
         }
 
-class NewStatement(ASTNode):
-    def __init__(self, obj, args):
-        self.obj = obj
-        self.args = args
+class IfStatement(StatementNode):
+    def __init__(self, condition: ExpressionNode, then_block: BlockNode, else_if_statements: list[StatementNode] = None, else_block: BlockNode = None):
+        super().__init__("IfStatement")
+        self.condition = condition
+        self.then_block = then_block
+        self.elif_statements: list[IfStatement] = else_if_statements or []
+        self.else_block = else_block
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "obj" : self.obj,
-            "args" : self.args
+            "condition": self.condition.to_dict(),
+            "then_block": self.then_block.to_dict(),
+            "elif_statements": [statement.to_dict() for statement in self.elif_statements],
+            "else_block": self.else_block.to_dict() if self.else_block else None
         }
 
-class StructStatement(ASTNode):
-    def __init__(self, name, args):
-        self.name = name
-        self.args = args
-    
+class WhileStatement(StatementNode):
+    def __init__(self, condition: ExpressionNode, body: BlockNode):
+        super().__init__("WhileStatement")
+        self.condition = condition
+        self.body = body
+
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "name" : self.name,
-            "args" : self.args
+            "condition": self.condition.to_dict(),
+            "body": self.body.to_dict()
+        }
+
+class ForStatement(StatementNode):
+    def __init__(self, variable: str, condition: ExpressionNode, increment: ExpressionNode, body: BlockNode):
+        super().__init__("ForStatement")
+        self.variable = variable
+        self.condition = condition
+        self.increment = increment
+        self.body = body
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "variable": self.variable,
+            "condition": self.condition.to_dict(),
+            # "increment": self.increment.to_dict(),
+            "body": self.body.to_dict()
+        }
+
+class BreakStatement(StatementNode):
+    def __init__(self):
+        super().__init__("BreakStatement")
+
+    def to_dict(self) -> dict:
+        return {**super().to_dict()}
+
+class ContinueStatement(StatementNode):
+    def __init__(self):
+        super().__init__("ContinueStatement")
+
+    def to_dict(self) -> dict:
+        return {**super().to_dict()}
+
+class ReturnStatement(StatementNode):
+    def __init__(self, expression: ExpressionNode):
+        super().__init__("ReturnStatement")
+        self.expression = expression
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "return": self.expression
         }
