@@ -1,6 +1,6 @@
-func add(int a, int b) {
+func add(int a, int b) -> int {
     return a + b;
 }
 
-let int x = add(1, 2);
+int x = add(1, 2);
 print("add(1, 2) = " + x);

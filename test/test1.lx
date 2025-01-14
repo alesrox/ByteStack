@@ -1,8 +1,8 @@
 print("For loop: ");
-for (let int i = 0; i < 4) { print("" + i + ", "); }
+for (int i = 0; i < 4) { print("" + i + ", "); }
 
 print("\nWhile Loop: ");
-let int x = 0;
+int x = 0;
 while (x < 4) {
     print("" + x + ", ");
     x = x + 1;
