@@ -30,11 +30,14 @@ void load_program(VM *vm, const char *filename) {
     vm->data_segment.pointer = 0;
     vm->data_segment.capacity = MEMORY_SIZE;
     vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
+
+    vm->heap.pointer = 0;
+    vm->heap.capacity = STACK_SIZE;
+    vm->heap.data = malloc(sizeof(DataItem) * vm->heap.capacity);
+
     vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
     vm->num_instr = num_instructions;
     vm->array_storage = malloc(sizeof(DynamicArray) * 4);
-    vm->attr_stack = malloc(sizeof(DataType));
-    vm->type_table = malloc(sizeof(TypeDescriptor));
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
@@ -48,8 +51,6 @@ void load_program(VM *vm, const char *filename) {
     vm->stack_pointer = 0;
     vm->frame_pointer = 0;
     vm->asp = 0;
-    vm->atp = 0;
-    vm->att = 0;
 }
 
 void run(VM *vm) {
@@ -66,8 +67,7 @@ void run(VM *vm) {
             right = (instr.opcode != 0x08) ? pop(vm) : (DataItem){0, 0};
             left = pop(vm);
 
-            // Only ints or floats
-            if (right.type <= 3 && left.type <= 3) {
+            if (right.type <= 3 && left.type <= 3) { // Only ints or floats
                 result = alu(vm, left, right, instr.opcode);
                 push(vm, result);
             } else if (right.type == ARRAY_TYPE ^ left.type == ARRAY_TYPE) {
@@ -209,45 +209,26 @@ void run(VM *vm) {
                 instr.arg.type = CHAR_TYPE;
                 push(vm, instr.arg);
                 break;
+            
+            case 0x20: // DEFINE_TYPE
+                store_data(vm, &vm->heap, -1, instr.arg);
 
-            case 0x20: // DEFINE_ATTR
-                vm->atp++;
-                vm->attr_stack = realloc(vm->attr_stack, vm->atp * sizeof(DataType));
-                vm->attr_stack[vm->atp - 1] = instr.arg.value;
+                for (int i = 0; i < (int) instr.arg.value; i++) {
+                    store_data(vm, &vm->heap, -1, pop(vm));
+                }
+
                 break;
             
-            case 0x21: // DEFINE_TYPE
-                address = vm->att++;
-                vm->type_table = realloc(vm->type_table, vm->att * sizeof(TypeDescriptor));
-                vm->type_table[address].id = address;
-                vm->type_table[address].num_attr = vm->atp;
-                vm->type_table[address].attributes = realloc(
-                    vm->type_table[address].attributes, vm->atp * sizeof(DataType)
-                );
+            case 0x21: // NEW
+                for (int i = 0; i < vm->heap.data[instr.arg.value].value; i++) {
+                    store_data(vm, &vm->heap, -1, pop(vm));
+                }
 
-                for (int i = 0; i < vm->atp; i++)
-                    vm->type_table[address].attributes[i] = vm->attr_stack[i];
-                
-                vm->atp = 0;
-                //free(vm->attr_stack);
+                push(vm, (DataItem){OBJ_TYPE, vm->heap.pointer});
                 break;
-            
-            case 0x22: // NEW
-                address = vm->data_segment.pointer;
-                aux = instr.arg.value;
-                
-                DataSegment* segment;
-                if (vm->frame_pointer != 0)
-                    segment = &vm->frames[vm->frame_pointer - 1].locals;
-                else
-                    segment = &vm->data_segment;
 
-                for (int i = 0; i < vm->type_table[aux].num_attr; i++)
-                    store_data(vm, segment, -1, pop(vm));
-                
-                result = (DataItem){OBJ_TYPE, address};
-                push(vm, result);
-                // store_data(vm, segment, -1, result);
+            case 0x22: // STORE_HEAP
+                store_data(vm, &vm->heap, instr.arg.value, pop(vm));
                 break;
 
             case 0xFE: // OBJCALL

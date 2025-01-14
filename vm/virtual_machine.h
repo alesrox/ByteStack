@@ -59,12 +59,6 @@ typedef struct {
 } Frame;
 
 typedef struct {
-    int id;
-    int num_attr;
-    DataType* attributes;
-} TypeDescriptor;
-
-typedef struct {
     int pc;
     int num_instr;
     int stack_pointer;
@@ -75,11 +69,8 @@ typedef struct {
     Frame frames[RECURSION_LIMIT];
     Instruction *memory;
     DataSegment data_segment;
+    DataSegment heap;
     DynamicArray* array_storage;
-
-    int atp, att;
-    DataType* attr_stack;
-    TypeDescriptor* type_table;
 } VM;
 
 // Virtual Machine Control

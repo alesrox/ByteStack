@@ -37,6 +37,13 @@ void show_vm_state(VM vm) {
         }
         if (i != vm.data_segment.pointer - 1) printf(", ");
     }
+
+    printf("]\nHeap: [");
+    for (int i = 0; i < vm.heap.pointer; i++) {
+        DataItem item = vm.heap.data[i];
+        printf("{%s, %d}", get_type[item.type], item.value);
+        if (i != vm.heap.pointer - 1) printf(", ");
+    }
     
     if (vm.frame_pointer != 0) {
         printf("]\nLocals: [");
