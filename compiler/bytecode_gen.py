@@ -26,6 +26,17 @@ class ByteCodeCompiler:
     
     def throw_error(self, msg: str = None):
         raise Exception(f"Compilation Error: {msg}")
+    
+    def get_heap_location(self, node: MemberAccess) -> int:
+        _info = node.identifier.object
+        info = self.structs[self.table_type[_info][0]]
+
+        i = self.table_type[_info][1] + 1 # STRUCT_POS_HEAP
+        for attr in info[2][::-1]:
+            if attr == node.identifier.attribute: break
+            i += 1
+
+        return i+1
 
     def add_instruction(self, node, scope: bool = False):
         if isinstance(node, BinaryExpression):
@@ -86,9 +97,13 @@ class ByteCodeCompiler:
 
                 self.append_bytecode((opcodes["NEW"], self.structs[node.struct][0]))
             elif isinstance(node, MemberAccess):
-                pass # TODO: struct attributes and list access
+                if not node.list_access:
+                    self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_location(node)))
+                else:
+                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
+                    self.append_bytecode((opcodes["LIST_ACCESS"], node.attribute))
             else:
-                self.throw_error('UnaryExpressionNode')
+                self.throw_error('UnaryExpressionNode') # TODO: msg
 
         elif isinstance(node, DeclarationNode):
             if isinstance(node, VariableDeclaration):
@@ -107,7 +122,7 @@ class ByteCodeCompiler:
                 self.append_bytecode((opcodes["STORE_LOCAL" if scope else "STORE_MEM"], -1))
             elif isinstance(node, FunctionDeclaration):
                 func_pos = self.length + 2
-                self.identifiers[node.identifier] = func_pos + 1
+                self.identifiers[node.identifier] = len(self.identifiers)
                 self.append_bytecode((opcodes["STORE"], func_pos + 1))
                 self.append_bytecode((opcodes["STORE_MEM"], -1))
                 self.append_bytecode((0, 0)) # JUMP x
@@ -145,7 +160,7 @@ class ByteCodeCompiler:
                 
                 self.append_bytecode((opcodes["DEFINE_TYPE"], len(node.attributes)))
             else:
-                self.throw_error('DeclarationNode')
+                self.throw_error('DeclarationNode') # TODO: msg
         
         elif isinstance(node, AssignmentNode):
             self.add_instruction(node.value, scope)

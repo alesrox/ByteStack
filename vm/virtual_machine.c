@@ -18,15 +18,7 @@ void throw_error(char* msg) {
     exit(EXIT_FAILURE);
 }
 
-void load_program(VM *vm, const char *filename) {
-    FILE *file = fopen(filename, "rb");
-    if (!file) throw_error(error_messages[ERR_FILE_NOT_FOUND]);
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    
-    int num_instructions = size/5;
-
+void init_vm(VM *vm) {
     vm->data_segment.pointer = 0;
     vm->data_segment.capacity = MEMORY_SIZE;
     vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
@@ -35,9 +27,26 @@ void load_program(VM *vm, const char *filename) {
     vm->heap.capacity = STACK_SIZE;
     vm->heap.data = malloc(sizeof(DataItem) * vm->heap.capacity);
 
-    vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
-    vm->num_instr = num_instructions;
     vm->array_storage = malloc(sizeof(DynamicArray) * 4);
+    vm->memory = malloc(sizeof(Instruction)); // Size for one instruction
+    vm->num_instr = 0;
+
+    vm->pc = 0;
+    vm->stack_pointer = 0;
+    vm->frame_pointer = 0;
+    vm->asp = 0;
+}
+
+void load_program(VM *vm, const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) throw_error(error_messages[ERR_FILE_NOT_FOUND]);
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    int num_instructions = size/5;
+    vm->num_instr = num_instructions;
+    vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
 
     for (int i = 0; i < num_instructions; i++) {
         fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
@@ -46,11 +55,6 @@ void load_program(VM *vm, const char *filename) {
     }
 
     fclose(file);
-
-    vm->pc = 0;
-    vm->stack_pointer = 0;
-    vm->frame_pointer = 0;
-    vm->asp = 0;
 }
 
 void run(VM *vm) {
@@ -231,7 +235,11 @@ void run(VM *vm) {
                 store_data(vm, &vm->heap, instr.arg.value, pop(vm));
                 break;
 
-            case 0xFE: // OBJCALL
+            case 0x23: // LOAD_HEAP
+                push(vm, vm->heap.data[instr.arg.value]);
+                break;
+
+            case 0xFE: // OBJCALL # TODO: REPLACE
                 objcall(vm, instr.arg.value);
                 break;
 
@@ -248,6 +256,7 @@ int main(int argc, char* argv[]) {
     if (debuging) printf("Debug mode is ON.");
 
     VM virtual_machine;
+    init_vm(&virtual_machine);
     load_program(&virtual_machine, filename);
     run(&virtual_machine);
     if (debuging) { virtual_machine.pc++; show_vm_state(virtual_machine); }
