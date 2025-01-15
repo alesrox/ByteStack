@@ -141,7 +141,8 @@ void run(VM *vm) {
                 break;
 
             case 0x17: // CALL
-                run_function(vm, vm->data_segment.data[instr.arg.value].value);
+                // run_function(vm, vm->data_segment.data[(instr.arg.value == -1) ? pop(vm).value : instr.arg.value].value);
+                run_function(vm, (instr.arg.value == -1) ? pop(vm).value : vm->data_segment.data[instr.arg.value].value);
                 break;
 
             case 0x18: // STORE_LOCAL
@@ -224,11 +225,13 @@ void run(VM *vm) {
                 break;
             
             case 0x21: // NEW
+                address = vm->heap.pointer;
+                store_data(vm, &vm->heap, -1, (DataItem){OBJ_TYPE, instr.arg.value});
                 for (int i = 0; i < vm->heap.data[instr.arg.value].value; i++) {
                     store_data(vm, &vm->heap, -1, pop(vm));
                 }
 
-                push(vm, (DataItem){OBJ_TYPE, vm->heap.pointer});
+                push(vm, (DataItem){OBJ_TYPE, address});
                 break;
 
             case 0x22: // STORE_HEAP

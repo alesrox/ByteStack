@@ -1,8 +1,8 @@
 #include "virtual_machine.h"
 
-char* get_type[ARRAY_TYPE + 1] = {
+char* get_type[OBJ_TYPE + 1] = {
     "UNASSIGNED", "INT", "FLOAT",
-    "CHAR", "ARRAY"
+    "CHAR", "ARRAY", "OBJ"
 };
 
 // Print a DataItem on {type, value} format

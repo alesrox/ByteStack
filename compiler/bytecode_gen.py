@@ -27,16 +27,16 @@ class ByteCodeCompiler:
     def throw_error(self, msg: str = None):
         raise Exception(f"Compilation Error: {msg}")
     
-    def get_heap_location(self, node: MemberAccess) -> int:
-        _info = node.identifier.object
+    def get_heap_location(self, from_object: str, attribute: str) -> int:
+        _info = from_object
         info = self.structs[self.table_type[_info][0]]
 
         i = self.table_type[_info][1] + 1 # STRUCT_POS_HEAP
         for attr in info[2][::-1]:
-            if attr == node.identifier.attribute: break
+            if attr == attribute: break
             i += 1
 
-        return i+1
+        return i
 
     def add_instruction(self, node, scope: bool = False):
         if isinstance(node, BinaryExpression):
@@ -71,25 +71,29 @@ class ByteCodeCompiler:
                 for arg in node.args:
                     self.add_instruction(arg, scope)
 
-                if node.from_obj != 'System':
-                    if scope and node.from_obj in self.locals:
-                        self.append_bytecode((opcodes["LOAD_LOCAL"], self.locals[node.from_obj]))
-                    else:
-                        self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
-                
-                if node.identifier in built_in_funcs:
-                    opcode = opcodes["SYSCALL"]
-                    input_funcs = built_in_funcs
+                if node.from_obj in self.table_type:
+                    self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_location(node.from_obj, node.identifier)))
+                    self.append_bytecode((opcodes["CALL"], -1))
                 else:
-                    opcode = opcodes["OBJCALL"]
-                    input_funcs = built_in_obj_funcs
+                    if node.from_obj != 'System':
+                        if scope and node.from_obj in self.locals:
+                            self.append_bytecode((opcodes["LOAD_LOCAL"], self.locals[node.from_obj]))
+                        else:
+                            self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
 
-                if node.identifier in input_funcs:
-                    self.append_bytecode((opcode, input_funcs[node.identifier]))
-                elif node.identifier in self.identifiers:
-                    self.append_bytecode((opcodes["CALL"], self.identifiers[node.identifier]))
-                else: 
-                    self.throw_error(node.identifier) # TODO: msg
+                    if node.identifier in built_in_funcs:
+                        opcode = opcodes["SYSCALL"]
+                        input_funcs = built_in_funcs
+                    else:
+                        opcode = opcodes["OBJCALL"]
+                        input_funcs = built_in_obj_funcs
+
+                    if node.identifier in input_funcs:
+                        self.append_bytecode((opcode, input_funcs[node.identifier]))
+                    elif node.identifier in self.identifiers:
+                        self.append_bytecode((opcodes["CALL"], self.identifiers[node.identifier]))
+                    else: 
+                        self.throw_error(node.identifier) # TODO: msg
             elif isinstance(node, NewCall):
                 for arg in node.args:
                     self.heap.append(f"DATA-{node.struct}")
@@ -98,7 +102,7 @@ class ByteCodeCompiler:
                 self.append_bytecode((opcodes["NEW"], self.structs[node.struct][0]))
             elif isinstance(node, MemberAccess):
                 if not node.list_access:
-                    self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_location(node)))
+                    self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_location(node.object, node.attribute)))
                 else:
                     self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
                     self.append_bytecode((opcodes["LIST_ACCESS"], node.attribute))
@@ -167,15 +171,7 @@ class ByteCodeCompiler:
 
             if isinstance(node.identifier, MemberAccess):
                 if not node.identifier.list_access: # Struct
-                    _info = node.identifier.object
-                    info = self.structs[self.table_type[_info][0]]
-
-                    i = self.table_type[_info][1] + 1 # STRUCT_POS_HEAP
-                    for attr in info[2][::-1]:
-                        if attr == node.identifier.attribute: break
-                        i += 1
-                    
-                    self.append_bytecode((opcodes["STORE_HEAP"], i+1))
+                    self.append_bytecode((opcodes["STORE_HEAP"], self.get_heap_location(node.identifier.object, node.identifier.attribute)))
                 else: # List access
                     list_set = []
                     identifier = node.identifier.object
