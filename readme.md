@@ -37,13 +37,11 @@ The compiler supports several flags for debugging and output customization:
 * -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
 
 ## Next Step
-- Fix some bugs
-- Dictionaries or json-like-objects (like Python dicts).
 - Import statement.
+- Dictionaries or json-like-objects (like Python dicts).
 
 ## Future features to add
 - System control functions
 - Multi-file scripts (like import statement from python or java, or #include from C/C++/C#)
 - Trash collector for the Virtual Machine
 - Something else in order to improve the language
-- Invalid Type Assignment Errors: Implementing checks in the parser to prevent the assignment of incompatible types, such as assigning a float literal to a string var.
