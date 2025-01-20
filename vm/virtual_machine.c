@@ -19,22 +19,21 @@ void throw_error(char* msg) {
 }
 
 void init_vm(VM *vm) {
-    vm->data_segment.pointer = 0;
-    vm->data_segment.capacity = MEMORY_SIZE;
-    vm->data_segment.data = malloc(sizeof(DataItem) * vm->data_segment.capacity);
+    vm->memory.pointer = 0;
+    vm->memory.capacity = MEMORY_SIZE;
+    vm->memory.data = malloc(sizeof(DataItem) * vm->memory.capacity);
 
     vm->heap.pointer = 0;
     vm->heap.capacity = STACK_SIZE;
     vm->heap.data = malloc(sizeof(DataItem) * vm->heap.capacity);
 
     vm->array_storage = malloc(sizeof(DynamicArray) * 4);
-    vm->memory = malloc(sizeof(Instruction)); // Size for one instruction
     vm->num_instr = 0;
 
     vm->pc = 0;
-    vm->stack_pointer = 0;
-    vm->frame_pointer = 0;
     vm->asp = 0;
+    vm->stack_pointer = 0;
+    vm->frame_pointer = -1;
 }
 
 void load_program(VM *vm, const char *filename) {
@@ -46,12 +45,12 @@ void load_program(VM *vm, const char *filename) {
     
     int num_instructions = size/5;
     vm->num_instr = num_instructions;
-    vm->memory = malloc(sizeof(Instruction) * (num_instructions + 1));
+    vm->instruction_memory = malloc(sizeof(Instruction) * (num_instructions + 1));
 
     for (int i = 0; i < num_instructions; i++) {
-        fread(&vm->memory[i].opcode, sizeof(uint8_t), 1, file);
-        vm->memory[i].arg.type = UNASSIGNED_TYPE; 
-        fread(&vm->memory[i].arg.value, sizeof(uint32_t), 1, file);
+        fread(&vm->instruction_memory[i].opcode, sizeof(uint8_t), 1, file);
+        vm->instruction_memory[i].arg.type = UNASSIGNED_TYPE; 
+        fread(&vm->instruction_memory[i].arg.value, sizeof(uint32_t), 1, file);
     }
 
     fclose(file);
@@ -59,7 +58,7 @@ void load_program(VM *vm, const char *filename) {
 
 void run(VM *vm) {
     do {
-        Instruction instr = vm->memory[vm->pc++];
+        Instruction instr = vm->instruction_memory[vm->pc++];
         DataItem left, right, result;
         int address, index, array_access, aux, length;
 
@@ -110,11 +109,11 @@ void run(VM *vm) {
 
             case 0x11: // STORE_MEM
                 result = pop(vm);
-                store_data(vm, &vm->data_segment, instr.arg.value, result);
+                store_data(vm, &vm->memory, instr.arg.value, result);
                 break;
 
             case 0x12: // LOAD
-                push(vm, vm->data_segment.data[instr.arg.value]);
+                push(vm, vm->memory.data[instr.arg.value]);
                 break;
 
             case 0x13: // JUMP
@@ -125,42 +124,16 @@ void run(VM *vm) {
                 if (pop(vm).value) 
                     vm->pc = instr.arg.value;
                 break;
-            
-            case 0x15: // CREATE_SCOPE
-                if (vm->frame_pointer >= RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
 
-                vm->frames[vm->frame_pointer].locals.pointer = 0;
-                vm->frames[vm->frame_pointer].locals.capacity = MEMORY_SIZE;
-                vm->frames[vm->frame_pointer].locals.data = malloc(sizeof(DataItem) * vm->frames[vm->frame_pointer].locals.capacity);
-                vm->frame_pointer++;
+            case 0x15: // CALL
+                run_function(vm, (instr.arg.value == -1) ? pop(vm).value : vm->memory.data[instr.arg.value].value);
                 break;
             
-            case 0x16: // DEL_SCOPE
-                free(vm->frames[vm->frame_pointer - 1].locals.data);
-                vm->frame_pointer--;
-                break;
-
-            case 0x17: // CALL
-                // run_function(vm, vm->data_segment.data[(instr.arg.value == -1) ? pop(vm).value : instr.arg.value].value);
-                run_function(vm, (instr.arg.value == -1) ? pop(vm).value : vm->data_segment.data[instr.arg.value].value);
-                break;
-
-            case 0x18: // STORE_LOCAL
-                result = pop(vm);
-                store_data(vm, &vm->frames[vm->frame_pointer - 1].locals, instr.arg.value, result);
-                break;
-            
-            case 0x19: // LOAD_LOCAL
-                push(vm, vm->frames[vm->frame_pointer - 1].locals.data[instr.arg.value]);
-                break;
-            
-            case 0x1A: // RETURN
-                free(vm->frames[vm->frame_pointer - 1].locals.data);
-                vm->pc = vm->frames[vm->frame_pointer - 1].return_address;
-                vm->frame_pointer--;
+            case 0x16: // RETURN
+                vm->pc = vm->return_address[vm->frame_pointer--];
                 return;
 
-            case 0x1B: // BUILD_LIST
+            case 0x17: // BUILD_LIST
                 result.type = ARRAY_TYPE;
                 result.value = vm->asp++;
 
@@ -177,7 +150,7 @@ void run(VM *vm) {
                 push(vm, result);
                 break;
             
-            case 0x1C: // LIST_ACCESS
+            case 0x18: // LIST_ACCESS
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
                 array_access = pop(vm).value;
                 
@@ -187,13 +160,13 @@ void run(VM *vm) {
                 push(vm, result);
                 break;
             
-            case 0x1D: // LIST_SET
+            case 0x19: // LIST_SET
                 index = (instr.arg.value == -1) ? pop(vm).value : instr.arg.value;
                 array_access = pop(vm).value;
                 vm->array_storage[array_access].items[index] = pop(vm).value;
                 break;
 
-            case 0x1E: // BUILD_STR
+            case 0x1A: // BUILD_STR
                 result.type = ARRAY_TYPE;
                 result.value = vm->asp++;
 
@@ -210,12 +183,12 @@ void run(VM *vm) {
                 push(vm, result);
                 break;
             
-            case 0x1F: // STORE_CHAR
+            case 0x1B: // STORE_CHAR
                 instr.arg.type = CHAR_TYPE;
                 push(vm, instr.arg);
                 break;
             
-            case 0x20: // DEFINE_TYPE
+            case 0x1C: // DEFINE_TYPE
                 store_data(vm, &vm->heap, -1, instr.arg);
 
                 for (int i = 0; i < (int) instr.arg.value; i++) {
@@ -224,7 +197,7 @@ void run(VM *vm) {
 
                 break;
             
-            case 0x21: // NEW
+            case 0x1D: // NEW
                 address = vm->heap.pointer;
                 store_data(vm, &vm->heap, -1, (DataItem){OBJ_TYPE, instr.arg.value});
                 for (int i = 0; i < vm->heap.data[instr.arg.value].value; i++) {
@@ -234,12 +207,25 @@ void run(VM *vm) {
                 push(vm, (DataItem){OBJ_TYPE, address});
                 break;
 
-            case 0x22: // STORE_HEAP
-                store_data(vm, &vm->heap, instr.arg.value, pop(vm));
+            case 0x1E: // STORE_HEAP
+                store_data(vm, &vm->heap, pop(vm).value + instr.arg.value, pop(vm));
                 break;
 
-            case 0x23: // LOAD_HEAP
-                push(vm, vm->heap.data[instr.arg.value]);
+            case 0x1F: // LOAD_HEAP
+                push(vm, vm->heap.data[pop(vm).value + instr.arg.value]);
+                break;
+            
+            case 0x20: // CAST
+                right = pop(vm);
+                if (instr.arg.value <= 1 && right.type == 2) {
+                    right.type = 1;
+                    right.value = (uint32_t)(int) extract_float(right);
+                } else if (instr.arg.value == 2 && right.type == 1) {
+                    right.type = 2;
+                    float temp = extract_float(right);
+                    right.value = *(uint32_t*)&temp;
+                }
+                push(vm, right);
                 break;
 
             case 0xFE: // OBJCALL # TODO: REPLACE

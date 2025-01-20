@@ -34,7 +34,7 @@ void print_data_list(DataItem* data, int size, VM* vm) {
 }
 
 void show_vm_state(VM vm) {
-    Instruction instr = vm.memory[vm.pc - 1];
+    Instruction instr = vm.instruction_memory[vm.pc - 1];
 
     // Print a head
     printf("\n-----------------\n");
@@ -49,21 +49,14 @@ void show_vm_state(VM vm) {
 
     // Print data segment
     printf("\nMemory: ");
-    print_data_list(vm.data_segment.data, vm.data_segment.pointer, &vm);
+    print_data_list(vm.memory.data, vm.memory.pointer, &vm);
 
     // Print heap
     printf("\nHeap: ");
     print_data_list(vm.heap.data, vm.heap.pointer, &vm);
 
-    // Print locals if exits
-    if (vm.frame_pointer != 0) {
-        printf("\nLocals: ");
-        Frame current_frame = vm.frames[vm.frame_pointer - 1];
-        print_data_list(current_frame.locals.data, current_frame.locals.pointer, &vm);
-    }
-
     // Print current frame information
-    printf("\nFrame: %d", vm.frame_pointer);
+    printf("\nFrame: %d\n", vm.frame_pointer + 1);
 
     // Special instructions Input and Output
     if (instr.opcode == 0xFF && instr.arg.value == 1) printf("\nOutput: ");
