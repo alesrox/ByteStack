@@ -10,7 +10,6 @@ class Parser:
         self.lexer = lexer
         self.current_token = None
         self.semantic = Semantic()
-        self.aux_semantic = None
         self.next_token()
     
     def next_token(self):
