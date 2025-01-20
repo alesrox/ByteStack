@@ -4,5 +4,11 @@ struct test {
 }
 
 test obj = new test(10, 2);
-obj.num1 = 3;
-// print(obj.num2);
+obj.num1 = 5;
+
+func print_test(test aux) {
+    print("num1: " + aux.num1 + "\n");
+    print("num2: " + aux.num2);
+}
+
+print_test(obj);
