@@ -12,17 +12,6 @@ class BlockNode(ASTNode):
             "statements": [statement.to_dict() if statement else None for statement in self.statements]
         }
 
-class TypeNode(ASTNode):
-    def __init__(self, name):
-        super().__init__()
-        self.name = name
-
-    def to_dict(self) -> dict:
-        return {
-            # **super().to_dict(),
-            "primitive type" : self.name
-        }
-
 class ExpressionNode(ASTNode):
     def __init__(self, expression_type: str):
         self.expression_type = expression_type
@@ -43,8 +32,8 @@ class BinaryExpression(ExpressionNode):
         return {
             **super().to_dict(),
             "operator": self.operator,
-            "right": self.right.to_dict(),
-            "left": self.left.to_dict()
+            "left": self.left.to_dict() if self.left else None,
+            "right": self.right.to_dict()
         }
 
 class UnaryExpressionNode(ExpressionNode):
@@ -58,7 +47,7 @@ class UnaryExpressionNode(ExpressionNode):
         }
 
 class Literal(UnaryExpressionNode):
-    def __init__(self, value_type: TypeNode, value):
+    def __init__(self, value_type: str, value):
         super().__init__('Literal')
         self.value_type = value_type
         self.value = value
@@ -67,7 +56,7 @@ class Literal(UnaryExpressionNode):
         return {
             **super().to_dict(),
             "value_type": self.value_type,
-            "value": self.value
+            "value": f"\'{self.value}\'" if "STRING" in self.value_type else self.value
         }
 
 class FunctionCall(UnaryExpressionNode):
@@ -112,6 +101,19 @@ class MemberAccess(UnaryExpressionNode):
             "attribute": self.attribute
         }
 
+class CastingExpression(UnaryExpressionNode):
+    def __init__(self, new_type: str, expression: ExpressionNode):
+        super().__init__('Casting Expression')
+        self.new_type = new_type
+        self.expression = expression
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            "casting" : self.new_type,
+            "expression": self.expression.to_dict()
+        }
+
 class DeclarationNode(ASTNode):
     def __init__(self, obj_declarated, identifier: str):
         self.obj_declarated = obj_declarated
@@ -124,7 +126,7 @@ class DeclarationNode(ASTNode):
         }
 
 class VariableDeclaration(DeclarationNode):
-    def __init__(self, identifier: str, var_type: TypeNode, initializer: ExpressionNode = None):
+    def __init__(self, identifier: str, var_type: str, initializer: ExpressionNode = None):
         super().__init__('Variable', identifier)
         self.var_type = var_type
         self.initializer = initializer
@@ -137,7 +139,7 @@ class VariableDeclaration(DeclarationNode):
         }
 
 class ParameterNode(ASTNode):
-    def __init__(self, p_type: TypeNode, identifier: str):
+    def __init__(self, p_type: str, identifier: str):
         self.type = p_type
         self.identifier = identifier
 
@@ -149,7 +151,7 @@ class ParameterNode(ASTNode):
         }
 
 class FunctionDeclaration(DeclarationNode):
-    def __init__(self, identifier: str, return_type: TypeNode, parameters: list[ParameterNode], body: BlockNode):
+    def __init__(self, identifier: str, return_type: str, parameters: list[ParameterNode], body: BlockNode):
         super().__init__('Function', identifier)
         self.return_type = return_type
         self.parameters = parameters

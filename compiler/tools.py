@@ -1,4 +1,4 @@
-from syntax_tree import ASTNode
+from syntax_tree import *
 
 def pretty_print(data, indent=0):
     spaces = ' ' * indent
@@ -51,3 +51,65 @@ def string_to_list(string: str) -> list:
         list_from_string.append(packed)
 
     return list_from_string
+
+def name(func_name: str, args: list, original: str):
+    if original in args:
+        return f'{func_name}.{original}'
+
+    return original
+
+def module(func_name: str, arguments: list[ParameterNode], ast_node: ASTNode):
+    if isinstance(ast_node, BlockNode):
+        statements = []
+        for ast in ast_node.statements:
+            statements.append(module(func_name, arguments, ast))
+
+        ast_node.statements = statements
+    elif isinstance(ast_node, BinaryExpression):
+        ast_node.left = module(func_name, arguments, ast_node.left)
+        ast_node.right = module(func_name, arguments, ast_node.right)
+    elif isinstance(ast_node, Literal):
+        ast_node.value = name(func_name, arguments, ast_node.value)
+    elif isinstance(ast_node, FunctionCall):
+        ast_node.identifier = name(func_name, arguments, ast_node.identifier)
+        ast_node.from_obj = name(func_name, arguments, ast_node.from_obj)
+        args = []
+        for arg in ast_node.args:
+            args.append(module(func_name, arguments, arg))
+        
+        ast_node.args = args
+    elif isinstance(ast_node, NewCall):
+        args = []
+        for arg in ast_node.args:
+            args.append(module(func_name, arguments, arg))
+        
+        ast_node.args = args
+    elif isinstance(ast_node, MemberAccess):
+        ast_node.object = name(func_name, arguments, ast_node.object)
+        ast_node.attribute = module(func_name, arguments, ast_node.attribute)
+    elif isinstance(ast_node, CastingExpression):
+        ast_node.expression = module(func_name, arguments, ast_node.expression)
+    elif isinstance(ast_node, VariableDeclaration):
+        ast_node.initializer = module(func_name, arguments, ast_node.initializer)
+    elif isinstance(ast_node, AssignmentNode):
+        ast_node.identifier = name(func_name, arguments, ast_node.identifier)
+    elif isinstance(ast_node, IfStatement):
+        ast_node.condition = module(func_name, arguments, ast_node.condition)
+        ast_node.then_block = module(func_name, arguments, ast_node.then_block)
+        ast_node.else_block = module(func_name, arguments, ast_node.else_block)
+        elifs = []
+        for item in ast_node.elif_statements:
+            elifs.append(module(func_name, arguments, item))
+        
+        ast_node.elif_statements = elifs
+    elif isinstance(ast_node, WhileStatement):
+        ast_node.condition = module(func_name, arguments, ast_node.condition)
+        ast_node.body = module(func_name, arguments, ast_node.body)
+    elif isinstance(ast_node, ForStatement):
+        ast_node.body = module(func_name, arguments, ast_node.body)
+        ast_node.condition = module(func_name, arguments, ast_node.condition)
+        ast_node.variable = name(func_name, arguments, ast_node.variable)
+    elif isinstance(ast_node, ReturnStatement):
+        ast_node.expression = module(func_name, arguments, ast_node.expression)
+
+    return ast_node
