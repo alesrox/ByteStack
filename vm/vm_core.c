@@ -38,15 +38,9 @@ void store_data(VM* vm, DataSegment *ds, int address, DataItem item) {
 }
 
 void run_function(VM* vm, uint32_t func_id) {
-    if (vm->frame_pointer == RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
-
-    vm->frames[vm->frame_pointer].locals.pointer = 0;
-    vm->frames[vm->frame_pointer].locals.capacity = MEMORY_SIZE;
-    vm->frames[vm->frame_pointer].locals.data = malloc(sizeof(DataItem) * MEMORY_SIZE);
-    vm->frames[vm->frame_pointer].return_address = vm->pc;
+    if (vm->frame_pointer++ >= RECURSION_LIMIT) throw_error(error_messages[ERR_RECURSION_LIMIT]);
+    vm->return_address[vm->frame_pointer] = vm->pc;
     vm->pc = func_id;
-    vm->frame_pointer++;
-
     run(vm);
 }
 

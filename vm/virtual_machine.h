@@ -54,22 +54,18 @@ typedef struct {
 } Instruction;
 
 typedef struct {
-    DataSegment locals;
-    int return_address;
-} Frame;
-
-typedef struct {
     int pc;
     int num_instr;
     int stack_pointer;
     int frame_pointer;
     int asp; // array storage pointer
 
+    int return_address[RECURSION_LIMIT];
     DataItem stack[STACK_SIZE];
-    Frame frames[RECURSION_LIMIT];
-    Instruction *memory;
-    DataSegment data_segment;
+    
+    Instruction *instruction_memory;
     DataSegment heap;
+    DataSegment memory;
     DynamicArray* array_storage;
 } VM;
 
