@@ -11,7 +11,6 @@ tokens = [
 # TODO: Constantes
 
 keywords = {
-    'let'       : 'LET',
     'if'        : 'IF',
     'else'      : 'ELSE',
     'elif'      : 'ELIF',
@@ -36,10 +35,14 @@ keywords = {
     'not'       : 'NOT',
     'Array'     : 'ARRAY',
     'struct'    : 'STRUCT',
+    'continue'  : 'CONTINUE',
+    'break'     : 'BREAK',
 }
 
 tokens += list(keywords.values())
 
+t_CONTINUE = r'continue'
+t_BREAK = r'break'
 t_RET = r'->'
 t_PLUS = r'\+'
 t_MINUS = r'-'

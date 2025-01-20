@@ -7,7 +7,6 @@ from parser import Parser
 from bytecode_gen import ByteCodeCompiler
 
 if __name__ == "__main__":
-    sys.tracebacklimit = 0
     if len(sys.argv) < 2: raise Exception("File to compile is needed")
 
     file = open(sys.argv[1])
