@@ -1,7 +1,7 @@
 import copy
-import utils
-from syntax_tree import *
-from error import SemanticError
+import utils.utils as utils
+from utils.syntax_tree import *
+from utils.error import SemanticError
 
 operations = {
     '+': "add", '-': "substract", '*': "multiply", '/': "divide", '%': "modulize",

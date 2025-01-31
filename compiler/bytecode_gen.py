@@ -1,6 +1,6 @@
-from syntax_tree import *
-from tools import string_to_list
-from utils import opcodes, built_in_funcs, operations, built_in_obj_funcs
+from utils.syntax_tree import *
+from utils.tools import string_to_list
+from utils.utils import opcodes, built_in_funcs, operations, built_in_obj_funcs
 
 class ByteCodeCompiler:
     def __init__(self):

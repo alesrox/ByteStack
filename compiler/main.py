@@ -1,11 +1,11 @@
 import sys
 import struct
-import tools
-from utils import opcodes
+import utils.tools as tools
+from utils.utils import opcodes
 from lexer import lexer
 from parser import Parser
 from bytecode_gen import ByteCodeCompiler
-from error import CompilationException
+from utils.error import CompilationException
 
 class Compiler:
     def __init__(self, filename, output_file="output.o"):
