@@ -1,8 +1,8 @@
-from syntax_tree import *
-from utils import literals
-from tools import module
+from utils.syntax_tree import *
+from utils.utils import literals
+from utils.tools import module
 from lexer import keywords
-from error import ParserError
+from utils.error import ParserError
 from semantic_analyzer import Semantic
 
 class Parser:

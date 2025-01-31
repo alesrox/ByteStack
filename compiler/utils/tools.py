@@ -1,4 +1,4 @@
-from syntax_tree import *
+from utils.syntax_tree import *
 
 def pretty_print(data, indent=0):
     spaces = ' ' * indent
