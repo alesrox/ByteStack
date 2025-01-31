@@ -258,7 +258,7 @@ class Semantic:
     
     def check_function_call(self, func_name, arguments):
         if func_name in utils.built_in_funcs or func_name in utils.built_in_obj_funcs:
-            return None # TODO
+            return arguments # TODO
 
         expected_num_args = len(self.functions[func_name])
         if len(arguments) > expected_num_args:

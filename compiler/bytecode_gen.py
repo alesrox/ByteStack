@@ -311,5 +311,5 @@ class ByteCodeCompiler:
             if self.in_loop:
                 self.b_c_statement = [self.length, 'Continue']
                 self.append_bytecode(0)
-        else:
-            raise Exception(f"ASTNode uncontrolled: {self.node.to_dict()}")
+        # else:
+        #     raise Exception(f"ASTNode uncontrolled: {node}")
