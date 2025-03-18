@@ -37,6 +37,9 @@ The compiler supports several flags for debugging and output customization:
 * -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
 
 ## Next Step
+- Memory usage optimization.
+- Support for long and double type.
+- For each statement.
 - Import statement.
 - Dictionaries or json-like-objects (like Python dicts).
 
