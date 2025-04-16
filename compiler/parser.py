@@ -162,6 +162,13 @@ class Parser:
         elif self.current_token.type != 'POINT':
             self.semantic.lineno = self.current_token.lineno
             self.semantic.get_var_type(identifier) # Throws an error if identifier doesn't exits
+            if self.current_token.type == 'START_LIST':
+                return MemberAccess(
+                    identifier,
+                    self.expression().value[0],
+                    True
+                )
+
             return Literal('VARIABLE', identifier)
         
         self.next_token() # Consume '.'
@@ -334,7 +341,7 @@ class Parser:
                 self.next_token() # Consume ';'
                 value = self.semantic.check_types_assigment(identifier, value)
                 return AssignmentNode(identifier, value)
-            
+
         if self.current_token.type == 'POINT':
             self.next_token() # Consume '.'
             access_attr = self.current_token.value

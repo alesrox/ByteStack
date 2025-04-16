@@ -15,7 +15,7 @@ class Semantic:
         self.non_named_contexts = 0
 
         self.primitive_types = [
-            'INT', 'FLOAT', 'BOOL', 'STRING'
+            'INT', 'BYTE', 'FLOAT', 'BOOL', 'STRING',
         ]
 
         self.non_primitive_types = ['[]']
@@ -97,13 +97,17 @@ class Semantic:
     def literal_casting(self, expected_type: str, result: Literal) -> any:
         match expected_type:
             case 'BOOL':
-                return bool(result.type)
+                return bool(result.value)
             case 'INT':
-                return int(result.type)
+                return int(result.value)
+            case 'BYTE':
+                return max(-128, min(127, result.value))
             case 'FLOAT':
                 return float(result.value)
             case 'STRING':
                 return str(result.value)
+
+        raise TypeError(f"Expected a {expected_type} but {result.value_type} given")
     
     def implicit_casting(self, expected_type: str, result_type: str) -> bool:
         same_type = expected_type == result_type
@@ -203,7 +207,9 @@ class Semantic:
         first_element = True
         for element in literal_list:
             pre_sub_type = sub_type
-            if isinstance(element.value, list):
+            if isinstance(element, BinaryExpression):
+                sub_type = self.get_binary_type(element)
+            elif isinstance(element.value, list):
                 if first_element: matrix_order += '[]'
                 sub_type = self.get_list_type(element.value)
             else:
@@ -253,7 +259,7 @@ class Semantic:
             return CastingExpression(expected_type, result)
         elif expected_type != result_type:
             self.throw_error(result_type, expected_type)
-
+    
         return result
     
     def check_function_call(self, func_name, arguments):
