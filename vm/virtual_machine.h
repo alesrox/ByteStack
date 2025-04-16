@@ -1,109 +1,23 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-
+#pragma once
+#include "includes/memory.h"
+#include "includes/stack.h"
+#include "includes/errors.h"
+#include "stdio.h"
 #define RECURSION_LIMIT 128
-#define STACK_SIZE 256
-#define MEMORY_SIZE 512
-
-typedef enum {
-    ERR_FILE_NOT_FOUND,
-    ERR_RECURSION_LIMIT,
-    ERR_MEMORY_OUT_OF_BOUNDS,
-    ERR_EMPTY_STACK,
-    ERR_BAD_TYPE,
-    ERR_OUT_OF_BOUNDS,
-    ERR_OPENING_FILE,
-    ERR_WRITING_FILE,
-    ERR_WRITING_BINARY,
-    ERR_COUNT
-} ErrorCode;
-
-char *error_messages[ERR_COUNT];
-
-typedef enum {
-    UNASSIGNED_TYPE,
-    INT_TYPE,
-    FLOAT_TYPE,
-    CHAR_TYPE,
-    ARRAY_TYPE,
-    OBJ_TYPE
-} DataType;
 
 typedef struct {
-    DataType type;
-    uint32_t value;
-} DataItem;
-
-typedef struct {
-    int size;
-    int capacity;
-    DataType type;
-    uint32_t *items;
-} DynamicArray;
-
-typedef struct {
-    int pointer;
-    int capacity;
-    DataItem *data;
-} DataSegment;
-
-typedef struct {
-    uint8_t opcode;
-    DataItem arg;
-} Instruction;
-
-typedef struct {
-    int pc;
-    int num_instr;
-    int stack_pointer;
+    int program_size;
     int frame_pointer;
-    int asp; // array storage pointer
-
-    int return_address[RECURSION_LIMIT];
-    DataItem stack[STACK_SIZE];
     
-    Instruction *instruction_memory;
-    DataSegment heap;
-    DataSegment memory;
-    DynamicArray* array_storage;
+    Stack stack;
+    Memory memory;
+    Heap heap;
+
+    Instruction *pc;
+    Instruction *bytecode;
+    Instruction* return_address[RECURSION_LIMIT];
 } VM;
 
-// Virtual Machine Control
-void load_program(VM *vm, const char *filename);
-void throw_error(char *msg);
-void run(VM *vm);
-
-// VM Core
-DataItem pop(VM *vm);
-void push(VM *vm, DataItem value);
-void store_data(VM *vm, DataSegment *ds, int address, DataItem item);
-void run_function(VM* vm, uint32_t func_id);
-void built_in_subprint(DataItem item, FILE *out);
-void built_in_print(VM *vm);
-void syscall(VM *vm, int arg);
-
-// ALU Core
-uint32_t format_float(float value);
-float extract_float(DataItem item);
-float float_mod(float a, float b);
-int logic_unit(VM *vm, uint32_t left, uint32_t right, uint8_t op);
-float float_alu(VM *vm, DataItem left, DataItem right, uint8_t op);
-uint32_t int_alu(VM *vm, uint32_t left, uint32_t right, uint8_t op);
-DataItem alu(VM *vm, DataItem left, DataItem right, uint8_t op);
-
-// Arrays Utils
-void init_array(DynamicArray *array, int initial_capacity);
-void array_assigment(VM *vm, int address, int item);
-void resize_array(DynamicArray *array, int new_capacity);
-void append_array(DynamicArray *array, uint32_t value);
-void remove_at(DynamicArray *array, int index);
-void remove_last(DynamicArray *array);
-void objcall(VM *vm, int arg);
-
-// Stings Utils
-void convert_int_to_str(DynamicArray *arr, uint32_t value);
-void convert_float_to_str(DynamicArray *arr, uint32_t value);
-
-// Debug Tools
-void show_vm_state(VM vm);
+void vm_init(VM *vm, const char *filename);
+void vm_destroy(VM *vm);
+void vm_run(VM *vm);
