@@ -1,13 +1,8 @@
 # My own Programming Language
-Lexscript: A new high-level and strongly-typed language on development
+Lexscript: A new high-level and strongly-typed language on development.
 
-## Compile the Virtual Machine
-The Virtual Machine (./vml) is compiled for MacOS systems with ARM chips, but you can compile it for your operating system using this command:
-```bash
-gcc vm/*.c -o vml
-```
-
-## Compiler Usage
+## Compiler
+### Compiler Usage
 The compiler, written in Python, takes a .lx file and generates the corresponding bytecode for the virtual machine.
 ```bash
 python compiler/main.py <lex file> <output filename>
@@ -17,7 +12,22 @@ Example
 python compiler/main.py test/test3.lx output
 ```
 
-## Run the Virtual Machine
+### Compiler Flags
+The compiler supports several flags for debugging and output customization:
+
+* -l: Only print the output of the lexer stage.
+* -p: Only print the output of the parser stage.
+* -d: Export a human-readable version of the bytecode to output.txt.
+* -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
+
+# Virtual Machine
+### Compile the Virtual Machine
+The Virtual Machine (./vml) is compiled for MacOS systems with ARM chips, but you can compile it for your operating system using the makefile:
+```bash
+make
+```
+
+### Run the Virtual Machine
 After compiling, you can execute the virtual machine with a binary file as input:
 <binary file>
 ```bash
@@ -28,17 +38,8 @@ Example:
 ./vml output
 ```
 
-## Compiler Flags
-The compiler supports several flags for debugging and output customization:
-
-* -l: Only print the output of the lexer stage.
-* -p: Only print the output of the parser stage.
-* -d: Export a human-readable version of the bytecode to output.txt.
-* -b: Export the raw bytecode to output.txt for direct use with the virtual machine.
-
 ## Next Step
-- Memory usage optimization.
-- Support for long and double type.
+- BigInt and BigFloat implementation.
 - For each statement.
 - Import statement.
 - Dictionaries or json-like-objects (like Python dicts).
