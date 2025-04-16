@@ -25,6 +25,7 @@ keywords = {
     'object'    : 'OBJECT',
     'extends'   : 'EXTENDS',
     'int'       : 'INT',
+    'byte'       : 'BYTE',
     'float'     : 'FLOAT',
     'bool'      : 'BOOL',
     'string'    : 'STRING',

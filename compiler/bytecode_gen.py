@@ -7,6 +7,7 @@ class ByteCodeCompiler:
         self.length = 0
         self.bytecode = []
 
+        self.memory = 0
         self.identifiers = {}
         self.heap = []
         self.structs = {}
@@ -49,7 +50,9 @@ class ByteCodeCompiler:
                 elif node.value_type == 'FLOAT_LITERAL':
                     self.append_bytecode((opcodes["STORE_FLOAT"], node.value))
                 elif node.value_type == 'BOOL_LITERAL':
-                    self.append_bytecode((opcodes["STORE"], 1 if node.value else 0))
+                    self.append_bytecode((opcodes["STORE_BYTE"], 1 if node.value else 0))
+                elif node.value_type == 'BYTE_LITERAL':
+                    self.append_bytecode((opcodes["STORE_BYTE"], node.value))
                 elif node.value_type == 'STRING_LITERAL':
                     string = string_to_list(node.value)
                     for char in string[::-1]:
@@ -67,7 +70,7 @@ class ByteCodeCompiler:
                     raise Exception(f"Literal Node uncontrolled: {node.to_dict()}")
 
             elif isinstance(node, FunctionCall):
-                for arg in node.args:
+                for arg in node.args[::-1]:
                     self.add_instructions(arg)
 
                 if node.from_obj in self.table_type:
@@ -102,9 +105,13 @@ class ByteCodeCompiler:
                 if not node.list_access:
                     self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
                     self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_relative_location(node.object, node.attribute)))
+                elif isinstance(node.attribute, UnaryExpressionNode):
+                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
+                    self.append_bytecode((opcodes["LIST_ACCESS"], node.attribute.value))
                 else:
                     self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
-                    self.append_bytecode((opcodes["LIST_ACCESS"], node.attribute))
+                    self.add_instructions(node.attribute)
+                    self.append_bytecode((opcodes["LIST_ACCESS"], -1))
             elif isinstance(node, CastingExpression):
                 cast_argument = 0 if node.new_type == 'BOOL' else 1 if node.new_type == 'INT' else 2
                 self.add_instructions(node.expression)
@@ -114,7 +121,8 @@ class ByteCodeCompiler:
 
         elif isinstance(node, DeclarationNode):
             if isinstance(node, VariableDeclaration):
-                self.identifiers[node.identifier] = len(self.identifiers)
+                self.identifiers[node.identifier] = self.memory
+                self.memory += 1 if node.var_type in ('BOOL', 'CHAR') else 4
                 
                 if isinstance(node.initializer, NewCall):
                     self.table_type[node.identifier] = node.initializer.struct
@@ -130,7 +138,10 @@ class ByteCodeCompiler:
                 self.append_bytecode((opcodes["STORE_MEM"], -1))
             elif isinstance(node, FunctionDeclaration):
                 func_pos = self.length
-                self.identifiers[node.identifier] = len(self.identifiers)
+
+                self.identifiers[node.identifier] = self.memory
+                self.memory += 1 if node.return_type in ('BOOL', 'CHAR') else 4
+
                 self.append_bytecode((0, 0)) # STORE func_start_pos
                 self.append_bytecode((opcodes["STORE_MEM"], -1))
 
@@ -138,7 +149,9 @@ class ByteCodeCompiler:
                     if arg.type in self.structs: 
                         self.table_type[f'{node.identifier}.{arg.identifier}'] = arg.type
 
-                    self.identifiers[f'{node.identifier}.{arg.identifier}'] = len(self.identifiers)
+                    self.identifiers[f'{node.identifier}.{arg.identifier}'] = self.memory
+                    self.memory += 1 if arg.type in ('BOOL', 'CHAR') else 4
+
                     self.append_bytecode((opcodes["STORE"], 0))
                     self.append_bytecode((opcodes["STORE_MEM"], -1))
                 
