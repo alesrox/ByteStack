@@ -1,5 +1,4 @@
 from utils.syntax_tree import *
-from utils.tools import string_to_list
 from utils.utils import opcodes, built_in_funcs, operations, built_in_obj_funcs
 
 class ByteCodeCompiler:
@@ -54,11 +53,11 @@ class ByteCodeCompiler:
                 elif node.value_type == 'BYTE_LITERAL':
                     self.append_bytecode((opcodes["STORE_BYTE"], node.value))
                 elif node.value_type == 'STRING_LITERAL':
-                    string = string_to_list(node.value)
+                    string = node.value.replace('\\n', '\n').replace('\\t', '\t')
                     for char in string[::-1]:
-                        self.append_bytecode((opcodes["STORE_CHAR"], char))
+                        self.append_bytecode((opcodes["STORE_CHAR"], ord(char)))
                     
-                    self.append_bytecode((opcodes["BUILD_STR"], len(string)))
+                    self.append_bytecode((opcodes["BUILD_LIST"], len(string)))
                 elif '[]' in node.value_type:
                     for item in node.value[::-1]:
                         self.add_instructions(item)
@@ -102,14 +101,21 @@ class ByteCodeCompiler:
 
                 self.append_bytecode((opcodes["NEW"], self.structs[node.struct][0]))
             elif isinstance(node, MemberAccess):
+                identifier = node.object
+                load_root = True
+                if isinstance(identifier, MemberAccess):
+                    self.add_instructions(identifier)
+                    load_root = False
+                    identifier = identifier.object
+
                 if not node.list_access:
-                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
+                    if load_root: self.append_bytecode((opcodes["LOAD"], self.identifiers[identifier]))
                     self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_relative_location(node.object, node.attribute)))
                 elif isinstance(node.attribute, UnaryExpressionNode):
-                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
+                    if load_root: self.append_bytecode((opcodes["LOAD"], self.identifiers[identifier]))
                     self.append_bytecode((opcodes["LIST_ACCESS"], node.attribute.value))
                 else:
-                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.object]))
+                    if load_root: self.append_bytecode((opcodes["LOAD"], self.identifiers[identifier]))
                     self.add_instructions(node.attribute)
                     self.append_bytecode((opcodes["LIST_ACCESS"], -1))
             elif isinstance(node, CastingExpression):
@@ -128,7 +134,7 @@ class ByteCodeCompiler:
                     self.table_type[node.identifier] = node.initializer.struct
                 
                 if node.initializer == None:
-                    instruction = 'BUILD_STR' if node.var_type == 'STRING' else 'STORE'
+                    instruction = 'BUILD_LIST' if node.var_type == 'STRING' else 'STORE'
                     if '[]' in node.var_type: instruction = 'BUILD_LIST'
                     
                     self.append_bytecode((opcodes[instruction], 0))

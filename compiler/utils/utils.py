@@ -26,12 +26,9 @@ opcodes = {
     "BUILD_LIST"    : 0x19,
     "LIST_ACCESS"   : 0x1A,
     "LIST_SET"      : 0x1B,
-    "BUILD_STR"     : 0x1C,
-    "DEFINE_TYPE"   : 0x1D,
-    "NEW"           : 0x1E,
-    "STORE_HEAP"    : 0x1F,
-    "LOAD_HEAP"     : 0x20,
-    "CAST"          : 0x21,
+    "DEFINE_TYPE"   : 0x1C,
+    "NEW"           : 0x1D,
+    "CAST"          : 0x1E,
     "OBJCALL"       : 0xFE,
     "SYSCALL"       : 0xFF
 }
