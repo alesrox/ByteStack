@@ -163,12 +163,18 @@ class Parser:
             self.semantic.lineno = self.current_token.lineno
             self.semantic.get_var_type(identifier) # Throws an error if identifier doesn't exits
             if self.current_token.type == 'START_LIST':
-                return MemberAccess(
-                    identifier,
-                    self.expression().value[0],
-                    True
-                )
-
+                self.next_token() # Consume '['
+                index = self.expression()
+                if self.current_token.type != 'END_LIST':
+                    self.throw_error(f"Expected a ']' symbol, but found '{self.get_token_info()}' instead")
+                self.next_token() # Consume ']'
+                identifier = MemberAccess(identifier, index, True)
+                while self.current_token.type == 'START_LIST':
+                    self.next_token() # Consume '['
+                    index = self.expression()
+                    self.next_token() # Conusme ']'
+                    identifier = MemberAccess(identifier, index, True)
+                return identifier
             return Literal('VARIABLE', identifier)
         
         self.next_token() # Consume '.'
@@ -176,7 +182,7 @@ class Parser:
         self.next_token()
 
         if self.current_token.type != 'LPAREN':
-            return MemberAccess(identifier, access_attr)
+            return MemberAccess(identifier, access_attr, False)
         
         return self.function_call(access_attr, identifier)
 

@@ -115,7 +115,7 @@ void handle_list_set(VM *vm, Instruction instr) {
 }
 
 void handle_build_str(VM *vm, Instruction instr) {
-    // TODO: Ya casi jeje
+    
 }
 
 // TODO: Replantearse la implementación de structs
