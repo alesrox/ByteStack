@@ -114,17 +114,9 @@ void handle_list_set(VM *vm, Instruction instr) {
     heap_write(&vm->heap, array_location, value, index * size_items, size_items);
 }
 
-void handle_build_str(VM *vm, Instruction instr) {
-    
-}
-
 // TODO: Replantearse la implementación de structs
 void handle_define_type(VM *vm, Instruction instr) {}
 void handle_new(VM *vm, Instruction instr) {}
-
-// TODO: ¿Siguen siendo necesarios? Casi seguro que no
-void handle_store_heap(VM *vm, Instruction instr) {}
-void handle_load_heap(VM *vm, Instruction instr) {}
 
 // TODO: Implementar casting
 void handle_cast(VM *vm, Instruction instr) {}
