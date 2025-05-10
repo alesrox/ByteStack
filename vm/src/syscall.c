@@ -28,33 +28,29 @@ void built_in_print(VM *vm) {
     Item element = pop(&vm->stack);
 
     if (element.type == ARRAY_TYPE) {
-        // DynamicArray arr = vm->array_storage[element.value];
-        // if (arr.type == CHAR_TYPE) {
-        //     for (int i = 0; i < arr.size; i++) {
-        //         DataItem item = {arr.type, arr.items[i]};
-        //         built_in_subprint(item, stdout);
-        //     }
-        // } else if (arr.type == ARRAY_TYPE) {
-        //     printf("[");
-        //     for (int i = 0; i < arr.size; i++) {
-        //         DataItem item = {arr.type, arr.items[i]};
-        //         push(vm, item);
-        //         built_in_print(vm);
-        //         if (i != arr.size - 1)
-        //             printf(", ");
-        //     }
-        //     printf("]");
-        // } else {
-        //     if (arr.type == UNASSIGNED_TYPE) arr.type = INT_TYPE;
-        //     printf("[");
-        //     for (int i = 0; i < arr.size; i++) {
-        //         DataItem item = {arr.type, arr.items[i]};
-        //         built_in_subprint(item, stdout);
-        //         if (i != arr.size - 1)
-        //             printf(", ");
-        //     }
-        //     printf("]");
+        DataType arr_type = vm->heap.table_type[element.value];
+        Memory arr = vm->heap.blocks[element.value];
+        if (arr_type == CHAR_TYPE) {
+            for (int i = 0; i < arr.size; i++) {
+                Item item = { arr_type, arr.data[i] };
+                built_in_subprint(item, stdout);
+            }
+        } else {
+            printf("[");
+            // for (int i = 0; i < arr.size; i++) {
+
+            // }
+            printf("]");
+        }
+        // printf("[");
+        // for (int i = 0; i < arr.size; i++) {
+        //     DataItem item = {arr.type, arr.items[i]};
+        //     push(vm, item);
+        //     built_in_print(vm);
+        //     if (i != arr.size - 1)
+        //         printf(", ");
         // }
+        // printf("]");
     } else {
         built_in_subprint(element, stdout);
     }
