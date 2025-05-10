@@ -1,15 +1,15 @@
 # My own Programming Language
-Lexscript: A new high-level and strongly-typed language on development.
+ByteStack: A new high-level and strongly-typed language on development.
 
 ## Compiler
 ### Compiler Usage
 The compiler, written in Python, takes a .lx file and generates the corresponding bytecode for the virtual machine.
 ```bash
-python compiler/main.py <lex file> <output filename>
+python compiler/main.py <file> <output filename>
 ```
 Example
 ```bash
-python compiler/main.py test/test3.lx output
+python compiler/main.py examples/example.lx output
 ```
 
 ### Compiler Flags
