@@ -5,6 +5,7 @@ void vm_init(VM *vm, const char *filename) {
     stack_init(&vm->stack);
     memory_init(&vm->memory);
     heap_init(&vm->heap);
+
     
     FILE *file = fopen(filename, "rb");
     if (!file) handle_error(FILE_NOT_FOUND);
@@ -12,6 +13,7 @@ void vm_init(VM *vm, const char *filename) {
     long size = ftell(file);
     fseek(file, 0, SEEK_SET);
     
+    string_format = 0;
     vm->frame_pointer = 0;
     vm->program_size = size/5;
     vm->bytecode = malloc(sizeof(Instruction) * (vm->program_size + 1));
@@ -65,6 +67,60 @@ OpcodeHandler opcode_handlers[] = {
     [0xFF] = handle_syscall,
 };
 
+void string_format_proc(VM* vm) {
+    Item right, left; pop(&vm->stack);
+    right = pop(&vm->stack); left = pop(&vm->stack);
+
+    string_format = 0;
+    
+    if (left.type == ARRAY_TYPE) {
+        if (right.type == ARRAY_TYPE) {
+            uint32_t buffer;
+            for (int i = 0; i < vm->heap.blocks[right.value].size; i++) {
+                heap_read(&vm->heap, right.value, &buffer, i, 1);
+                heap_write(&vm->heap, left.value, buffer, vm->heap.blocks[left.value].size + 1, 1);
+            }
+            
+            push(&vm->stack, left);
+        } else {
+            char str[32];
+            if (right.type == FLOAT_TYPE) {
+                sprintf(str, "%g", extract_float(right));
+            } else {
+                sprintf(str, "%d", right.value);
+            }
+            
+            vm->heap.table_type[left.value] = CHAR_TYPE;
+            for (int i = 0; i < strlen(str); i++)
+                heap_write(&vm->heap, left.value, str[i], vm->heap.blocks[left.value].size + i, 1);
+            
+            push(&vm->stack, left);
+        }
+    } else {
+        char str[32];
+        if (right.type == FLOAT_TYPE) {
+            sprintf(str, "%g", extract_float(right));
+        } else {
+            sprintf(str, "%d", right.value);
+        }
+
+        size_t address = heap_add_block(&vm->heap, CHAR_TYPE);
+        for (int i = 0; i < strlen(str); i++)
+            heap_write(&vm->heap, left.value, str[i], vm->heap.blocks[left.value].size + i, 1);
+
+        uint32_t buffer;
+        for (int i = 0; i < vm->heap.blocks[right.value].size; i++) {
+            heap_read(&vm->heap, right.value, &buffer, i, 1);
+            heap_write(&vm->heap, address, buffer, i, 1);
+        }
+
+        push(&vm->stack, (Item) {
+            ARRAY_TYPE,
+            address
+        });
+    }
+}
+
 void vm_run(VM *vm) {
     while (vm->pc < vm->bytecode + vm->program_size) {
         Instruction instr = *vm->pc++;
@@ -72,9 +128,10 @@ void vm_run(VM *vm) {
 
         if (instr.opcode < 0x0F) {
             alu(&vm->stack, instr.opcode);
+            if (string_format) string_format_proc(vm);
             continue;
         }
-
+        
         OpcodeHandler handler = opcode_handlers[instr.opcode];
         if (!handler) handle_error(UNDEFINED_ERROR);
         handler(vm, instr);

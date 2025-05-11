@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern size_t sizes[ARRAY_TYPE + 1];
+
 typedef struct {
     uint8_t *data;
     DataType *table_type;
@@ -16,16 +18,18 @@ typedef struct {
     size_t size;
 } Heap;
 
-void memory_init(Memory *mem);
-void memory_destroy(Memory *mem);
+void memory_init(Memory*);
+void memory_destroy(Memory*);
 
-int memory_write(Memory *mem, uint32_t address, uint32_t value, size_t size);
-int memory_read(Memory *mem, uint32_t address, uint32_t *value, size_t size);
-int memory_expand(Memory *mem, size_t new_size);
+int memory_write(Memory*, uint32_t, uint32_t, size_t);
+int memory_read(Memory*, uint32_t, uint32_t*, size_t);
+int memory_expand(Memory*, size_t);
 
-void heap_init(Heap *heap);
-void heap_destroy(Heap *heap);
+void heap_init(Heap*);
+void heap_destroy(Heap*);
 
-size_t heap_add_block(Heap *heap, DataType type);
-int heap_write(Heap *heap, size_t index, uint32_t value, size_t offset, size_t size);
-int heap_read(Heap *heap, size_t index, uint32_t *value, size_t offset, size_t size);
+size_t heap_add_block(Heap*, DataType);
+size_t duplicate_heap_block(Heap*, size_t, DataType, int);
+int heap_write(Heap*, size_t, uint32_t, size_t, size_t);
+int heap_read(Heap*, size_t, uint32_t*, size_t, size_t);
+int heap_remove_element(Heap*, size_t, size_t, size_t);

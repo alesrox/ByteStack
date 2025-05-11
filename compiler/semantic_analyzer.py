@@ -15,7 +15,7 @@ class Semantic:
         self.non_named_contexts = 0
 
         self.primitive_types = [
-            'INT', 'BYTE', 'FLOAT', 'BOOL', 'STRING',
+            'INT', 'BYTE', 'FLOAT', 'BOOL', 'CHAR', 'STRING'
         ]
 
         self.non_primitive_types = ['[]']
@@ -26,8 +26,8 @@ class Semantic:
             'getf'      : 'FLOAT',
             'type'      : 'STRING',
             'scan'      : 'STRING',
-            'read'      : '[]',
-            'write'     : 'VOID',
+            'read'      : 'BYTE[]',
+            'write'     : 'INT',
             'append'    : 'VOID',
             'size'      : 'INT',
             'remove'    : 'VOID',
@@ -133,6 +133,7 @@ class Semantic:
                         list_id = list_id.object
                         num_access += 1
                     else:
+                        if self.get_var_type(list_id) == 'STRING': return 'CHAR'
                         return self.get_var_type(list_id).replace('[]', '', num_access)
             else:
                 return self.structs[self.get_var_type(expr.object)][expr.attribute]
@@ -169,12 +170,12 @@ class Semantic:
         if operator == '/': return 'FLOAT'
 
         if operator in ['+', '-', '*', '%', '^']:
-            if (left == 'FLOAT') ^ (right == 'LEFT'):
+            if (left == 'FLOAT') ^ (right == 'FLOAT'):
                 return 'FLOAT'
             else:
                 return 'INT'
         else:
-            return 'BOOL'
+            return 'BYTE'
         
     def get_var_type(self, var_name):
         if var_name in self.table_type: return self.table_type[var_name]
@@ -225,45 +226,80 @@ class Semantic:
         return f'{sub_type}{matrix_order}'
     
     def check_list_types(self, expected_type, list_type):
-        if '[]' not in expected_type and expected_type != 'STRING':
+        count_indexed_expected = expected_type.count('[]') + 1 if 'STRING' in expected_type else 0
+        same_indexed_lists = list_type.count('[]') != count_indexed_expected
+
+        if not same_indexed_lists:
             self.throw_error(list_type, expected_type)
         
         # list_type = self.get_list_type(list_value)
         is_empty_list = '[]' * list_type.count('[]') == list_type
         if is_empty_list: return expected_type
         if expected_type != list_type:
+            if expected_type == 'STRING': return expected_type
             self.throw_error(list_type, expected_type)
         
         return expected_type
+    
+    def check_primitives_types(self, result, result_type, expected_type):
+        if not isinstance(result, Literal):
+            return CastingExpression(expected_type, result_type, result)
 
-    def check_types_assigment(self, variable, result: ExpressionNode): # JEJE
+        if result_type in ('BOOL', 'BYTE') and expected_type == 'INT':
+            return result # VM does the convertion automatically
+        
+        if result_type == 'FLOAT' and expected_type == 'INT':
+            return Literal('INT_LITERAL', int(result.value))
+        
+        if result_type == 'BOOL' and expected_type == 'BYTE':
+            return result # VM does the convertion automatically
+        
+        if result_type in ('INT', 'FLOAT') and expected_type == 'BYTE':
+            return Literal('INT_LITERAL', max(-128, min(127, int(result.value))))
+        
+        if expected_type == 'BOOL':
+            return Literal('BOOL_LITERAL', bool(result.value))
+        
+        if expected_type == 'FLOAT':
+            return Literal('FLOAT_LITERAL', float(result.value))
+
+        return self.throw_error(result_type, expected_type)
+
+    def check_types_assigment(self, variable, result: ExpressionNode):
         expected_type = self.get_var_type(variable) if isinstance(variable, str) else self.get_type(variable)
         result_type = self.get_type(result)
-        
-        if '[]' in result_type:
-            list_type = None
-            if isinstance(result, FunctionCall):
-                list_type = result_type
-            else:
-                list_type = self.get_list_type(result.value)
 
-            result_type = self.check_list_types(expected_type, list_type)
-        elif isinstance(result, Literal):
-            if self.implicit_casting(expected_type, result_type):
-                new_value = self.literal_casting(expected_type, result)
-                result = Literal(expected_type + '_LITERAL', new_value)
-            elif expected_type != result_type:
-                self.throw_error(result_type, expected_type)
+        if expected_type == result_type:
+            return result
         
-        if self.implicit_casting(expected_type, result_type):
-            return CastingExpression(expected_type, result)
-        elif expected_type != result_type:
+        is_not_primitive = lambda x: x not in self.primitive_types
+        count_sublists = lambda x: x.count('[]') + (1 if x == 'STRING' else 0)
+        if count_sublists(expected_type) != count_sublists(result_type):
             self.throw_error(result_type, expected_type)
-    
-        return result
-    
+        
+        if count_sublists(result_type) == 0:
+            if is_not_primitive(expected_type) or is_not_primitive(result_type):
+                self.throw_error(result_type, expected_type)
+            
+            return self.check_primitives_types(result, result_type, expected_type)
+        else: # ARRAY TYPES
+            expected_type = expected_type.replace('[]', '')
+            result_type = result_type.replace('[]', '')
+
+            if is_not_primitive(expected_type) or is_not_primitive(result_type):
+                self.throw_error(result_type, expected_type)
+
+            # TODO: When is a manual list with casting, in order to improved memory usage
+            if expected_type == 'STRING' and not is_not_primitive(result_type):
+                return CastingExpression('STRING', result_type, result)
+            
+            if result_type == 'STRING' and expected_type in ('BOOL', 'BYTE'):
+                return CastingExpression(expected_type, result_type, result)
+
+        return self.throw_error(result_type, expected_type)
+
     def check_function_call(self, func_name, arguments):
-        if func_name in utils.built_in_funcs or func_name in utils.built_in_obj_funcs:
+        if func_name in utils.built_in_funcs: # or func_name in utils.built_in_obj_funcs
             return arguments # TODO
 
         expected_num_args = len(self.functions[func_name])
@@ -277,7 +313,7 @@ class Semantic:
             arg_type = self.get_type(arguments[i])
             if self.functions[func_name][i] != arg_type:
                 if self.implicit_casting(self.functions[func_name][i], arg_type):
-                    arguments[i] = CastingExpression(self.functions[func_name][i], arguments[i])
+                    arguments[i] = CastingExpression(self.functions[func_name][i], arg_type, arguments[i])
                 else:
                     msg_part1 = f"TypeError: Argument of '{func_name}' function has an invalid type. "
                     msg_part2 = f"Expected {self.functions[func_name][i]} value, but got {arg_type} value"

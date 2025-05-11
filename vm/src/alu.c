@@ -33,6 +33,17 @@ Item aritmetic_unit(Stack *stack, uint8_t op) {
     int requires_float = left.type == FLOAT_TYPE || right.type == FLOAT_TYPE;
     int div_mod_op = op == 0x04 || op == 0x05;
 
+    if (left.type == ARRAY_TYPE || right.type == ARRAY_TYPE) {
+        push(stack, left);
+        push(stack, right);
+        string_format = 1;
+
+        return (Item) {
+            UNASSIGNED_TYPE,
+            -1
+        };
+    }
+
     if (requires_float || div_mod_op)
         return (Item) {
             FLOAT_TYPE,
@@ -107,8 +118,8 @@ uint32_t format_float(float value) {
 }
 
 float extract_float(Item item) {
-    if (item.type == FLOAT_TYPE){
-        return *((float*)&item.value);}
+    if (item.type == FLOAT_TYPE)
+        return *((float*)&item.value);
 
     return (float) ((int) item.value);
 }

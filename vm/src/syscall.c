@@ -15,12 +15,7 @@ void built_in_subprint(Item item, FILE *out) {
     } else if (item.type == FLOAT_TYPE) {
         fprintf(out, "%g", extract_float(item));
     } else if (item.type == CHAR_TYPE) {
-        uint32_t data = item.value;
-        for (int i = 0; i < 4; i++) {
-            char ch = (data >> (8 * i)) & 0xFF;
-            if (ch == '\0') break;
-            fprintf(out, "%c", ch);
-        }
+        fprintf(out, "%c", item.value);
     }
 }
 
@@ -28,29 +23,27 @@ void built_in_print(VM *vm) {
     Item element = pop(&vm->stack);
 
     if (element.type == ARRAY_TYPE) {
-        DataType arr_type = vm->heap.table_type[element.value];
+        Item item;
         Memory arr = vm->heap.blocks[element.value];
+        DataType arr_type = vm->heap.table_type[element.value];
+        
         if (arr_type == CHAR_TYPE) {
             for (int i = 0; i < arr.size; i++) {
-                Item item = { arr_type, arr.data[i] };
+                item = (Item){ arr_type, arr.data[i] };
                 built_in_subprint(item, stdout);
             }
         } else {
             printf("[");
-            // for (int i = 0; i < arr.size; i++) {
-
-            // }
+            for (int i = 0; i < arr.size/sizes[arr_type]; i++) {
+                uint32_t value;
+                heap_read(&vm->heap, element.value, &value, i * sizes[arr_type], sizes[arr_type]);
+                item = (Item){ arr_type, value }; 
+                push(&vm->stack, item);
+                built_in_print(vm);
+                if (i != arr.size/sizes[arr_type] - 1) printf(", ");
+            }
             printf("]");
         }
-        // printf("[");
-        // for (int i = 0; i < arr.size; i++) {
-        //     DataItem item = {arr.type, arr.items[i]};
-        //     push(vm, item);
-        //     built_in_print(vm);
-        //     if (i != arr.size - 1)
-        //         printf(", ");
-        // }
-        // printf("]");
     } else {
         built_in_subprint(element, stdout);
     }
@@ -68,183 +61,268 @@ void built_in_getf(VM *vm) {
     push(&vm->stack, (Item){FLOAT_TYPE, format_float(aux)});
 }
 
-// void str_type(VM* vm, DynamicArray* arr, DataItem item) {
-//     char* get_type[ARRAY_TYPE + 1] = {
-//         "UNASSIGNED", "INT", "FLOAT",
-//         "CHAR", "ARRAY"
-//     };
-
-//     DataType type = item.type;
-
-//     uint32_t temp = 0; int shift = 0;
-//     for (int i = 0; get_type[type][i] != '\0'; i++) {
-//         temp |= ((uint32_t)(unsigned char)get_type[type][i]) << shift;
-//         shift += 8;
-
-//         if (shift == 32) {
-//             append_array(arr, temp);
-//             temp = 0; shift = 0;
-//         }
-//     }
-
-//     if (shift != 0) append_array(arr, temp);
-//     if (type == ARRAY_TYPE) {
-//         append_array(arr, 95);
-//         str_type(vm, arr, (DataItem){vm->array_storage[item.value].type, 0});
-//     }
-// } 
-
 void built_in_scan(VM *vm) {
-    // DataItem input = {ARRAY_TYPE, vm->asp++};
-    // char input_str[2048];
+    char input_str[2048];
+    scanf("%2047s", input_str);
 
-    // scanf("%2047s", input_str);
-    // init_array(&vm->array_storage[input.value], 4);
-    // vm->array_storage[input.value].type = CHAR_TYPE;
-
-    // for (int i = 0; i < 2048 && input_str[i] != '\0'; i++)
-    //     append_array(&vm->array_storage[input.value], input_str[i]);
-
-    // push(vm, input);
+    size_t address = heap_add_block(&vm->heap, CHAR_TYPE);
+    for (int i = 0; i < 2048 && input_str[i] != '\0'; i++)
+        heap_write(&vm->heap, address, input_str[i], i, 1);
+    
+    push(&vm->stack, (Item) {
+        ARRAY_TYPE,
+        address
+    });
 }
 
 void built_in_type(VM *vm) {
-    // DataItem arg = pop(vm);
-    // DataItem type = {ARRAY_TYPE, vm->asp++};
-    // init_array(&vm->array_storage[type.value], 4);
-    // vm->array_storage[type.value].type = CHAR_TYPE;
+    DataType arg_type = pop(&vm->stack).type;
+    size_t address = heap_add_block(&vm->heap, CHAR_TYPE);
 
-    // str_type(vm, &vm->array_storage[type.value], arg);
-    // push(vm, type);
+    char* get_type[ARRAY_TYPE + 1] = {
+        "UNASSIGNED", "BYTE", "INT", "FLOAT",
+        "CHAR", "ARRAY"
+    };
+
+    for (int i = 0; get_type[arg_type][i] != '\0'; i++)
+        heap_write(&vm->heap, address, get_type[arg_type][i], i, 1);
+
+    push(&vm->stack, (Item) {
+        ARRAY_TYPE,
+        address
+    });
 }
 
 void built_in_read(VM *vm) {
-    // FILE *file;
-    // int start, end, binary;
-    // long file_length;
-    // end = pop(vm).value;
-    // binary = pop(vm).value;
-    // start = pop(vm).value;
+    FILE *file;
+    int from, bytes_to_read;
 
-    // DynamicArray file_arr = vm->array_storage[pop(vm).value];
-    // DataItem read_result = {ARRAY_TYPE, vm->asp++};
-    // init_array(&vm->array_storage[read_result.value], 4);
+    uint32_t filename_address = pop(&vm->stack).value;
+    int length = vm->heap.blocks[filename_address].size;
 
-    // int index = 0;
-    // char filename[file_arr.size * 4 + 1];
-    // for (int i = 0; i < file_arr.size; i++)
-    //     for (int j = 0; j < 4; j++)
-    //         filename[index++] = (file_arr.items[i] >> (8 * j)) & 0xFF;
-    
-    // filename[file_arr.size * 4] = '\0';
+    char filename[length + 1];
+    for (int i = 0; i < length; i++) {
+        uint32_t aux;
+        heap_read(&vm->heap, filename_address, &aux, i, 1);
+        filename[i] = (char) aux;
+    }
+    filename[length] = '\0';
+    file = fopen(filename, "rb");
+    if (file == NULL) handle_error(FILE_NOT_FOUND);
 
-    // file = fopen(filename, (binary) ? "rb" : "r");
-    // if (file == NULL) throw_error(error_messages[ERR_FILE_NOT_FOUND]);
+    from = pop(&vm->stack).value;
+    bytes_to_read = pop(&vm->stack).value;
 
-    // int i = start;
-    // fseek(file, 0, SEEK_END);
-    // file_length = ftell(file);
-    // if (binary > 0) {
-    //     uint32_t aux;
-    //     if (binary > 4) binary = 4;
-    //     if (end < 0) end = file_length - (end + 1) * sizeof(uint8_t) * binary;
-    //     fseek(file, start * sizeof(uint8_t) * binary, SEEK_SET);
+    uint8_t aux;
+    fseek(file, 0, SEEK_END);
+    int file_length = ftell(file);
+    if (from < 0) from = file_length - (from + 1);
+    fseek(file, from, SEEK_SET);
 
-    //     vm->array_storage[read_result.value].type = UNASSIGNED_TYPE;
-    //     while (fread(&aux, sizeof(uint8_t) * binary, 1, file) && i < end) {
-    //         append_array(&vm->array_storage[read_result.value], aux);
-    //         i++;
-    //     }
-    // } else {
-    //     char c;
-    //     if (end < 0) end = file_length - (end + 1);
-    //     fseek(file, start, SEEK_SET);
+    int read_pointer = from;
+    int address = heap_add_block(&vm->heap, BOOL_TYPE);
+    while (fread(&aux, 1, 1, file) && read_pointer < from + bytes_to_read) {
+        heap_write(&vm->heap, address, aux, read_pointer - from, 1);
+        read_pointer++;
+    }
 
-    //     vm->array_storage[read_result.value].type = CHAR_TYPE;
-    //     int shift = 0; uint32_t temp = 0;
-    //     while ((c = fgetc(file)) != EOF && i < end) {
-    //         temp |= ((uint32_t)(unsigned char)c) << shift;
-    //         shift += 8; i++;
-
-    //         if (shift == 32 || i == end) {
-    //             append_array(&vm->array_storage[read_result.value], temp);
-    //             temp = 0; shift = 0;
-    //         }
-    //     }
-
-    //     if (shift != 0) append_array(&vm->array_storage[read_result.value], temp);
-    // }
-
-    // push(vm, read_result);
-    // fclose(file);
+    fclose(file);
+    push(&vm->stack, (Item) {
+        ARRAY_TYPE,
+        address
+    });
 }
 
 void built_in_write(VM *vm) {
-    // FILE *file;
-    // DataItem to_write;
-    // int start, binary, overwrite;
-    // long file_length;
+    FILE *file;
+    uint32_t filename_address, value_address;
+    uint32_t bytes_to_write, overwrite;
 
-    // overwrite = pop(vm).value;
-    // binary = pop(vm).value;
-    // to_write = pop(vm);
-    // DynamicArray file_arr = vm->array_storage[pop(vm).value];
+    filename_address = pop(&vm->stack).value;
+    int length = vm->heap.blocks[filename_address].size;
 
-    // int index = 0;
-    // char filename[file_arr.size * 4 + 1];
-    // for (int i = 0; i < file_arr.size; i++)
-    //     for (int j = 0; j < 4; j++)
-    //         filename[index++] = (file_arr.items[i] >> (8 * j)) & 0xFF;
-    
-    // filename[file_arr.size * 4] = '\0';
+    char filename[length + 1];
+    for (int i = 0; i < length; i++) {
+        uint32_t aux;
+        heap_read(&vm->heap, filename_address, &aux, i, 1);
+        filename[i] = (char) aux;
+    }
 
-    // file = fopen(filename, (overwrite) ? "w+" : "ab+");
+    value_address = pop(&vm->stack).value;
+    bytes_to_write = pop(&vm->stack).value;
+    overwrite = pop(&vm->stack).value;
 
-    // if (file == NULL)
-    //     throw_error(error_messages[ERR_OPENING_FILE]);
+    filename[length] = '\0';
+    file = fopen(filename, (overwrite != (uint32_t) 0) ? "wb" : "ab");
+    if (file == NULL) handle_error(FILE_NOT_FOUND);
 
-    // fseek(file, 0, SEEK_END);
-    // file_length = ftell(file);
+    size_t i;
+    uint8_t buffer; uint32_t buffer4;
+    for (i = 0; i < bytes_to_write; i++) {
+        heap_read(&vm->heap, value_address, &buffer4, i, 1);
+        buffer = (uint8_t) buffer4;
+        fwrite(&buffer, 1, 1, file);
+    }
 
-    // if (binary) {
-    //     if (to_write.type < ARRAY_TYPE) {
-    //         fwrite(&to_write.value, sizeof(uint32_t), 1, file);
-    //     } else {
-    //         DynamicArray arr = vm->array_storage[to_write.value];
-    //         for (int i = 0; i < arr.size; i++) {
-    //             uint32_t to_write_value = vm->array_storage[to_write.value].items[i];
-    //             if (arr.type == CHAR_TYPE) fwrite(&to_write_value, sizeof(uint8_t), 1, file);
-    //             else if (arr.type < CHAR_TYPE) fwrite(&to_write_value, sizeof(uint32_t), 1, file);
-    //             else throw_error(error_messages[ERR_WRITING_BINARY]);
-    //         }
-    //     }
-    // } else {
-    //     if (to_write.type < CHAR_TYPE) {
-    //         built_in_subprint(to_write, file);
-    //     } else {
-    //         DynamicArray arr = vm->array_storage[to_write.value];
-    //         for (int i = 0; i < arr.size; i++) {
-    //             if (arr.type <= CHAR_TYPE) built_in_subprint((DataItem){arr.type, arr.items[i]}, file);
-    //             else throw_error(error_messages[ERR_WRITING_FILE]);
-    //         }
-    //     }
-    // }
-
-    // fclose(file);
+    push(&vm->stack, (Item) {
+        INT_TYPE,
+        i
+    });
 }
+
+void built_in_size(VM* vm) {
+    Item arr = pop(&vm->stack);
+    push(&vm->stack, (Item) {
+        INT_TYPE,
+        vm->heap.blocks[arr.value].size
+    });
+}
+
+void built_in_append(VM* vm) {
+    Item arr, item;
+    arr = pop(&vm->stack);
+    item = pop(&vm->stack);
+    if (item.type != vm->heap.table_type[arr.value]) handle_error(UNDEFINED_ERROR);
+
+    heap_write(&vm->heap, arr.value, item.value, vm->heap.blocks[arr.value].size, sizes[arr.type]);
+}
+
+// TODO: Para implementar
+void built_in_remove_at(VM* vm) {
+    Item arr, index;
+    arr = pop(&vm->stack); index = pop(&vm->stack);
+
+    if (index.value < 0 || index.value > vm->heap.blocks[arr.value].size)
+        handle_error(INDEX_OUT_OF_BOUNDS);
+    
+    DataType arr_type = vm->heap.table_type[arr.value];
+    heap_remove_element(&vm->heap, arr.value, index.value, sizes[arr_type]);
+}
+
+void built_in_is_empty(VM* vm) {
+    Item arr = pop(&vm->stack);
+    
+    Item result = {
+        BOOL_TYPE,
+        (vm->heap.blocks[arr.value].size == 0) ? 1 : 0
+    };
+
+    push(&vm->stack, result);
+}
+
+void built_in_slice(VM* vm) {
+    
+}
+
+// TODO: 
+void built_in_map(VM* vm) {
+    Item arr, func_dir;
+    arr = pop(&vm->stack); func_dir = pop(&vm->stack);
+
+    push(&vm->stack, arr);
+}
+
+void built_in_filter(VM* vm) {
+    Item arr, func_dir;
+    arr = pop(&vm->stack); func_dir = pop(&vm->stack);
+
+    push(&vm->stack, arr);
+}
+
+void built_in_min(VM* vm) {
+    Item arr = pop(&vm->stack);
+    size_t block_index = arr.value;
+    DataType arr_type = vm->heap.table_type[block_index];
+    Memory* block = &vm->heap.blocks[block_index];
+
+    size_t elem_size = sizes[arr_type];
+    size_t total_elems = block->size / elem_size;
+
+    uint32_t min_value;
+    heap_read(&vm->heap, block_index, &min_value, 0, elem_size);
+
+    for (size_t i = 1; i < total_elems; i++) {
+        uint32_t buffer;
+        heap_read(&vm->heap, block_index, &buffer, i * elem_size, elem_size);
+
+        if (arr_type == FLOAT_TYPE) {
+            float current = extract_float((Item){FLOAT_TYPE, buffer});
+            float current_min = extract_float((Item){FLOAT_TYPE, min_value});
+            if (current < current_min) {
+                min_value = buffer;
+            }
+        } else {
+            if (buffer < min_value) {
+                min_value = buffer;
+            }
+        }
+    }
+
+    push(&vm->stack, (Item){arr_type, min_value});
+}
+
+void built_in_max(VM* vm) {
+    Item arr = pop(&vm->stack);
+    size_t block_index = arr.value;
+    DataType arr_type = vm->heap.table_type[block_index];
+    Memory* block = &vm->heap.blocks[block_index];
+
+    size_t elem_size = sizes[arr_type];
+    size_t total_elems = block->size / elem_size;
+
+    uint32_t max_value;
+    heap_read(&vm->heap, block_index, &max_value, 0, elem_size);
+
+    for (size_t i = 1; i < total_elems; i++) {
+        uint32_t buffer;
+        heap_read(&vm->heap, block_index, &buffer, i * elem_size, elem_size);
+
+        if (arr_type == FLOAT_TYPE) {
+            float current = extract_float((Item){FLOAT_TYPE, buffer});
+            float current_min = extract_float((Item){FLOAT_TYPE, max_value});
+            if (current > current_min) {
+                max_value = buffer;
+            }
+        } else {
+            if (buffer > max_value) {
+                max_value = buffer;
+            }
+        }
+    }
+
+    push(&vm->stack, (Item){arr_type, max_value});
+}
+
+// TODO:
+void built_in_lower(VM* vm) {}
+void built_in_upper(VM* vm) {}
+
+void built_in_toString(VM* vm) {}
 
 void (*builtins[])(VM *vm) = {
     built_in_exit,
     built_in_print,
     built_in_input,
     built_in_getf,
-    built_in_type,
     built_in_scan,
+    built_in_type,
     built_in_read,
     built_in_write,
+    built_in_size,
+    built_in_append,
+    built_in_remove_at,
+    built_in_is_empty,
+    built_in_map,
+    built_in_slice,
+    built_in_filter,
+    built_in_min,
+    built_in_max,
+    built_in_lower,
+    built_in_upper,
+    built_in_toString,
 };
 
 void syscall(VM *vm, int arg) {
-    if (arg > -1 && arg < 8) builtins[arg](vm);
+    if (arg > -1 && arg < 20) builtins[arg](vm);
     else printf("Unknown syscall: %d\n", arg);
 }

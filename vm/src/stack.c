@@ -8,7 +8,7 @@ void print_stack(const Stack stack) {
     printf("\n");
 }
 
-void stack_init(Stack *stack) {
+void stack_init(Stack* stack) {
     stack->top = -1;
 }
 

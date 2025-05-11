@@ -3,6 +3,7 @@
 #include "errors.h"
 
 #define STACK_SIZE 1024
+int string_format;
 
 // Method: Tagged Struct - To see later: NaN-Boxing
 typedef struct {
@@ -15,7 +16,7 @@ typedef struct {
     int top;
 } Stack;
 
-void stack_init(Stack *stack);
-void print_stack(const Stack stack);
-void push(Stack *stack, Item value);
-Item pop(Stack *stack);
+void stack_init(Stack*);
+void print_stack(const Stack);
+void push(Stack*, Item);
+Item pop(Stack*);

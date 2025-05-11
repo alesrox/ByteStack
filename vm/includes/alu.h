@@ -3,13 +3,13 @@
 #include "stack.h"
 #include <math.h>
 
-void alu(Stack *stack, uint8_t op);
-Item logic_unit(Stack *stack, uint8_t op);
-Item aritmetic_unit(Stack *stack, uint8_t op);
+void alu(Stack*, uint8_t);
+Item logic_unit(Stack*, uint8_t);
+Item aritmetic_unit(Stack*, uint8_t);
 
-float float_alu(Item left, Item right, uint8_t op);
-uint32_t format_float(float value);
-uint32_t int_alu(Item left, Item right, uint8_t op);
+float float_alu(Item, Item, uint8_t);
+uint32_t format_float(float);
+uint32_t int_alu(Item, Item, uint8_t);
 
-float extract_float(Item item);
-float float_mod(float a, float b);
+float extract_float(Item);
+float float_mod(float, float);

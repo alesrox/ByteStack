@@ -8,8 +8,6 @@ tokens = [
     'START_LIST', 'END_LIST', 'EMPTY_ARR', 'POINT', 'RET'
 ]
 
-# TODO: Constantes
-
 keywords = {
     'if'        : 'IF',
     'else'      : 'ELSE',
@@ -25,7 +23,7 @@ keywords = {
     'object'    : 'OBJECT',
     'extends'   : 'EXTENDS',
     'int'       : 'INT',
-    'byte'       : 'BYTE',
+    'byte'      : 'BYTE',
     'float'     : 'FLOAT',
     'bool'      : 'BOOL',
     'string'    : 'STRING',

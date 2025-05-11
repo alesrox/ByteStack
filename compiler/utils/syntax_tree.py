@@ -102,15 +102,17 @@ class MemberAccess(UnaryExpressionNode):
         }
 
 class CastingExpression(UnaryExpressionNode):
-    def __init__(self, new_type: str, expression: ExpressionNode):
+    def __init__(self, new_type: str, old_type: str, expression: ExpressionNode):
         super().__init__('Casting Expression')
         self.new_type = new_type
+        self.old_type = old_type
         self.expression = expression
 
     def to_dict(self) -> dict:
         return {
             **super().to_dict(),
-            "casting" : self.new_type,
+            "new type" : self.new_type,
+            "old type" : self.old_type,
             "expression": self.expression.to_dict()
         }
 

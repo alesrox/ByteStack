@@ -1,20 +1,4 @@
-// write() Args: filename, what to write, if is binary, if overwrite
-// read() Args: filename, from where, if is binary, to where
-string file = "test/test.txt";
+byte[] hola = read("examples/test.txt", 0, 4);
 
-write(file, "Hello World!\n", false, true);
-print(read(file, 0, false, 5)); // Hello
-print(read(file, 5, false, -1)); // World!\n
-
-string bin_file = "test/test.bin";
-int[] aux = [72, 101, 108, 108, 111];
-
-write(bin_file, aux, true, true);
-
-int[] read_int;
-read_int = read(bin_file, 0, 4, -1);
-print(read_int.toString() + "\n");
-
-string read_char;
-read_char = read(bin_file, 0, 4, -1);
-print(read_char);
+write("examples/test.txt", "hello", 5, true);
+write("examples/test.txt", " world!", 7, false);

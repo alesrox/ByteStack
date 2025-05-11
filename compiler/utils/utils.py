@@ -29,7 +29,6 @@ opcodes = {
     "DEFINE_TYPE"   : 0x1C,
     "NEW"           : 0x1D,
     "CAST"          : 0x1E,
-    "OBJCALL"       : 0xFE,
     "SYSCALL"       : 0xFF
 }
 
@@ -43,28 +42,50 @@ operations = {
 literals = ['INT_LITERAL', 'FLOAT_LITERAL', 'STRING_LITERAL', 'BOOL_LITERAL']
 
 built_in_funcs = {
-    'exit'  : 0,    
-    'print' : 1, 
-    'input' : 2,
-    'getf'  : 3,
-    'type'  : 4,
-    'scan'  : 5,
-    'read'  : 6,
-    'write' : 7,
+    'exit'      : 0,    
+    'print'     : 1, 
+    'input'     : 2,
+    'getf'      : 3,
+    'scan'      : 4,
+    'type'      : 5,
+    'read'      : 6,
+    'write'     : 7,
+    'size'      : 8,
+    'append'    : 9,
+    'remove_at' : 10,
+    'is_empty'  : 11,
+    'slice'     : 12,
+    'map'       : 13,
+    'filter'    : 14,
+    'min'       : 15,
+    'max'       : 16,
+    'lower'     : 17,
+    'upper'     : 18,
+    'toString'  : 19,
 }
 
-built_in_obj_funcs = {
-    'append'    : 0,
-    'size'      : 1,
-    'remove_at'    : 2,
-    'pop'       : 3,
-    'is_empty'  : 4,
-    'slice'     : 5,
-    'map'       : 6,
-    'filter'    : 7,
-    'min'       : 8,
-    'max'       : 9,
-    'lower'     : 10,
-    'upper'     : 11,
-    'toString'  : 12,
+TYPE_IDS = {
+    "BOOL": 1,
+    "BYTE": 1,
+    "INT": 2,
+    "FLOAT": 3,
+    "CHAR": 4,
+    "STRING": 5,
 }
+
+def get_type_info(type_str):
+    depth = type_str.count("[]")
+    base_type = type_str.replace("[]", "")
+
+    if base_type == "STRING":
+        return TYPE_IDS["CHAR"], depth + 1
+    else:
+        return TYPE_IDS[base_type], depth
+
+def encode_cast_arg(from_type_str, to_type_str):
+    from_id, from_depth = get_type_info(from_type_str)
+    to_id, to_depth = get_type_info(to_type_str)
+
+    max_depth = max(from_depth, to_depth)
+    encoded = (max_depth << 16) | (from_id << 8) | to_id
+    return encoded

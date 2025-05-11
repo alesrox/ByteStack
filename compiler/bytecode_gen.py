@@ -1,5 +1,5 @@
 from utils.syntax_tree import *
-from utils.utils import opcodes, built_in_funcs, operations, built_in_obj_funcs
+from utils.utils import opcodes, built_in_funcs, operations, encode_cast_arg
 
 class ByteCodeCompiler:
     def __init__(self):
@@ -26,16 +26,16 @@ class ByteCodeCompiler:
     def get_bytecode(self):
         return self.bytecode.copy()
     
-    def get_heap_relative_location(self, from_object: str, attribute: str) -> int:
-        _info = from_object
-        info = self.structs[self.table_type[_info]]
+    # def get_heap_relative_location(self, from_object: str, attribute: str) -> int:
+    #     _info = from_object
+    #     info = self.structs[self.table_type[_info]]
 
-        i = 1 # STRUCT_POS_HEAP
-        for attr in info[2][::-1]:
-            if attr == attribute: break
-            i += 1
+    #     i = 1 # STRUCT_POS_HEAP
+    #     for attr in info[2][::-1]:
+    #         if attr == attribute: break
+    #         i += 1
 
-        return i
+    #     return i
 
     def add_instructions(self, node: ASTNode):
         if isinstance(node, BinaryExpression):
@@ -73,23 +73,17 @@ class ByteCodeCompiler:
                     self.add_instructions(arg)
 
                 if node.from_obj in self.table_type:
-                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
+                    # self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
 
-                    self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_relative_location(node.from_obj, node.identifier)))
-                    self.append_bytecode((opcodes["CALL"], -1))
+                    # self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_relative_location(node.from_obj, node.identifier)))
+                    # self.append_bytecode((opcodes["CALL"], -1))
+                    pass
                 else:
                     if node.from_obj != 'System':
                         self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
 
                     if node.identifier in built_in_funcs:
-                        opcode = opcodes["SYSCALL"]
-                        input_funcs = built_in_funcs
-                    else:
-                        opcode = opcodes["OBJCALL"]
-                        input_funcs = built_in_obj_funcs
-
-                    if node.identifier in input_funcs:
-                        self.append_bytecode((opcode, input_funcs[node.identifier]))
+                        self.append_bytecode((opcodes["SYSCALL"], built_in_funcs[node.identifier]))
                     elif node.identifier in self.identifiers:
                         self.append_bytecode((opcodes["CALL"], self.identifiers[node.identifier]))
                     else: 
@@ -108,9 +102,10 @@ class ByteCodeCompiler:
                     load_root = False
                     identifier = identifier.object
 
-                if not node.list_access:
-                    if load_root: self.append_bytecode((opcodes["LOAD"], self.identifiers[identifier]))
-                    self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_relative_location(node.object, node.attribute)))
+                if not node.list_access: # Struct Access
+                    # if load_root: self.append_bytecode((opcodes["LOAD"], self.identifiers[identifier]))
+                    # self.append_bytecode((opcodes["LOAD_HEAP"], self.get_heap_relative_location(node.object, node.attribute)))
+                    pass
                 elif isinstance(node.attribute, UnaryExpressionNode):
                     if load_root: self.append_bytecode((opcodes["LOAD"], self.identifiers[identifier]))
                     self.append_bytecode((opcodes["LIST_ACCESS"], node.attribute.value))
@@ -119,9 +114,8 @@ class ByteCodeCompiler:
                     self.add_instructions(node.attribute)
                     self.append_bytecode((opcodes["LIST_ACCESS"], -1))
             elif isinstance(node, CastingExpression):
-                cast_argument = 0 if node.new_type == 'BOOL' else 1 if node.new_type == 'INT' else 2
                 self.add_instructions(node.expression)
-                self.append_bytecode((opcodes['CAST'], cast_argument))
+                self.append_bytecode((opcodes['CAST'], encode_cast_arg(node.old_type, node.new_type)))
             else:
                 raise Exception(f"UnaryExpressionNode uncontrolled: {node.to_dict()}")
 
@@ -134,7 +128,9 @@ class ByteCodeCompiler:
                     self.table_type[node.identifier] = node.initializer.struct
                 
                 if node.initializer == None:
-                    instruction = 'BUILD_LIST' if node.var_type == 'STRING' else 'STORE'
+                    instruction = 'STORE' if node.var_type == 'INT' else f'STORE_{node.var_type}'
+                    if node.var_type == 'BOOL': instruction = 'STORE_BYTE'
+                    if node.var_type == 'STRING': instruction = 'BUILD_LIST'
                     if '[]' in node.var_type: instruction = 'BUILD_LIST'
                     
                     self.append_bytecode((opcodes[instruction], 0))
@@ -204,8 +200,9 @@ class ByteCodeCompiler:
 
             if isinstance(node.identifier, MemberAccess):
                 if not node.identifier.list_access: # Struct
-                    self.append_bytecode((opcodes["LOAD"], self.identifiers[node.identifier.object]))
-                    self.append_bytecode((opcodes["STORE_HEAP"], self.get_heap_relative_location(node.identifier.object, node.identifier.attribute)))
+                    # self.append_bytecode((opcodes["LOAD"], self.identifiers[node.identifier.object]))
+                    # self.append_bytecode((opcodes["STORE_HEAP"], self.get_heap_relative_location(node.identifier.object, node.identifier.attribute)))
+                    pass
                 else: # List access
                     list_set = []
                     identifier = node.identifier.object

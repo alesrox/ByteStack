@@ -1,5 +1,13 @@
 #include "../includes/memory.h"
 
+size_t sizes[ARRAY_TYPE + 1] = {
+    [BOOL_TYPE]  = 1,
+    [INT_TYPE]   = 4,
+    [FLOAT_TYPE] = 4,
+    [CHAR_TYPE]  = 1,
+    [ARRAY_TYPE] = 4
+};
+
 void memory_init(Memory *mem) {
     mem->data = malloc(sizeof(uint8_t));
     mem->table_type = malloc(sizeof(DataType));
@@ -96,6 +104,35 @@ size_t heap_add_block(Heap *heap, DataType type) {
     return heap->size - 1;
 }
 
+size_t duplicate_heap_block(Heap *heap, size_t address, DataType to_type, int depth) {
+    if (address >= heap->size) handle_error(MEMORY_ACCESS_OUT_OF_BOUNDS);
+    
+    Memory src = heap->blocks[address];
+    
+    DataType type = (depth == 1) ? to_type : heap->table_type[address];
+    size_t new_index = heap_add_block(heap, type);
+    if (new_index == -1) return -1;
+    
+    Memory *dst = &heap->blocks[new_index];
+    if (memory_expand(dst, src.size) != 0) return -1;
+    
+    for (size_t i = 0; i < src.size; i++) {
+        if (depth == 1) {
+            uint32_t value;
+            heap_read(heap, address, &value, i * sizes[to_type], sizes[to_type]);
+            heap_write(heap, new_index, value, i * sizes[to_type], sizes[to_type]);
+        } else {
+            uint32_t child_address = src.data[i];
+            size_t new_child = duplicate_heap_block(heap, child_address, to_type, depth - 1);
+            if (new_child == -1) return -1;
+
+            heap_write(heap, new_index, new_child, i, 1);
+        }
+    }
+
+    return new_index;
+}
+
 int heap_write(Heap *heap, size_t index, uint32_t value, size_t offset, size_t size) {
     if (index >= heap->size) handle_error(UNDEFINED_ERROR);
 
@@ -108,4 +145,32 @@ int heap_write(Heap *heap, size_t index, uint32_t value, size_t offset, size_t s
 int heap_read(Heap *heap, size_t index, uint32_t *value, size_t offset, size_t size) {
     if (index >= heap->size) handle_error(UNDEFINED_ERROR);
     return memory_read(&heap->blocks[index], offset, value, size);
+}
+
+int heap_remove_element(Heap *heap, size_t block_index, size_t element_index, size_t element_size) {
+    if (block_index >= heap->size) {
+        handle_error(MEMORY_ACCESS_OUT_OF_BOUNDS);
+        return -1;
+    }
+
+    Memory *block = &heap->blocks[block_index];
+    size_t total_elements = block->size / element_size;
+
+    if (element_index >= total_elements) {
+        handle_error(MEMORY_ACCESS_OUT_OF_BOUNDS);
+        return -1;
+    }
+
+    size_t start = element_index * element_size;
+    size_t move_size = (total_elements - element_index - 1) * element_size;
+
+    if (move_size > 0) {
+        memmove(block->data + start,
+                block->data + start + element_size,
+                move_size);
+    }
+
+    block->size -= 1;
+
+    return 0;
 }
