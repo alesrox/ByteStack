@@ -1,4 +1,2 @@
-byte[] hola = read("examples/test.txt", 0, 4);
-
 write("examples/test.txt", "hello", 5, true);
 write("examples/test.txt", " world!", 7, false);

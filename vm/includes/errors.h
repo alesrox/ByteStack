@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "structs-type.h"
 #define ERR_COUNT 11
 
-uint8_t instr_pc_log;
+Instruction instr_pc_log;
 
 typedef enum {
     FILE_NOT_FOUND,

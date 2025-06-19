@@ -1,6 +1,7 @@
 #include "../includes/memory.h"
 
 size_t sizes[ARRAY_TYPE + 1] = {
+    [UNASSIGNED_TYPE] = 4,
     [BOOL_TYPE]  = 1,
     [INT_TYPE]   = 4,
     [FLOAT_TYPE] = 4,
@@ -62,8 +63,10 @@ int memory_write(Memory *mem, uint32_t address, uint32_t value, size_t size) {
 }
 
 int memory_read(Memory *mem, uint32_t address, uint32_t *value, size_t size) {
-    if (size == 0 || size > 4 || address + size > mem->size) 
+    if (size == 0 || size > 4 || address + size > mem->size) {
+        printf("%zu %zu %zu\n", size, address + size, mem->size);
         handle_error(MEMORY_ACCESS_OUT_OF_BOUNDS);
+    }
 
     *value = 0;
     for (size_t i = 0; i < size; ++i)
@@ -117,7 +120,7 @@ size_t duplicate_heap_block(Heap *heap, size_t address, DataType to_type, int de
     if (memory_expand(dst, src.size) != 0) return -1;
     
     for (size_t i = 0; i < src.size; i++) {
-        if (depth == 1) {
+        if (depth <= 1) {
             uint32_t value;
             heap_read(heap, address, &value, i * sizes[to_type], sizes[to_type]);
             heap_write(heap, new_index, value, i * sizes[to_type], sizes[to_type]);

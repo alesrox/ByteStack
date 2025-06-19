@@ -80,7 +80,10 @@ class ByteCodeCompiler:
                     pass
                 else:
                     if node.from_obj != 'System':
-                        self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
+                        if isinstance(node.from_obj, ASTNode):
+                            self.add_instructions(node.from_obj)
+                        else:
+                            self.append_bytecode((opcodes["LOAD"], self.identifiers[node.from_obj]))
 
                     if node.identifier in built_in_funcs:
                         self.append_bytecode((opcodes["SYSCALL"], built_in_funcs[node.identifier]))
@@ -142,7 +145,7 @@ class ByteCodeCompiler:
                 func_pos = self.length
 
                 self.identifiers[node.identifier] = self.memory
-                self.memory += 1 if node.return_type in ('BOOL', 'CHAR') else 4
+                self.memory += 4
 
                 self.append_bytecode((0, 0)) # STORE func_start_pos
                 self.append_bytecode((opcodes["STORE_MEM"], -1))

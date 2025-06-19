@@ -39,13 +39,18 @@ Example:
 ```
 
 ## Next Step
-- BigInt and BigFloat implementation.
-- For each statement.
-- Import statement.
-- Dictionaries or json-like-objects (like Python dicts).
+- toString function
+- filter and map functions
+- Structs implementation
+- Fixing some bugs
+
 
 ## Future features to add
+- Import statement
+- For each statement
 - System control functions
+- BigInt and BigFloat implementation
+- Dictionaries or json-like-objects (like Python dicts).
 - Multi-file scripts (like import statement from python or java, or #include from C/C++/C#)
 - Trash collector for the Virtual Machine
-- Something else in order to improve the language
+- Anything else in order to improve the language

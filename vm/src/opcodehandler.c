@@ -37,10 +37,11 @@ void handle_store_mem(VM *vm, Instruction instr) {
 void handle_load(VM *vm, Instruction instr) {
     uint32_t buffer;
     DataType buffer_type = vm->memory.table_type[instr.arg];
+    buffer_type = (buffer_type >= 0 && buffer_type <= 5) ? buffer_type : 0;
     size_t size_buffer = sizes[buffer_type];
 
     memory_read(&vm->memory, instr.arg, &buffer, size_buffer);
-    push(&vm->stack, (Item){ buffer_type, buffer });
+    push(&vm->stack, (Item) { buffer_type, buffer });
 }
 
 void handle_jump(VM *vm, Instruction instr) {
@@ -119,7 +120,6 @@ void handle_list_set(VM *vm, Instruction instr) {
 void handle_define_type(VM *vm, Instruction instr) {}
 void handle_new(VM *vm, Instruction instr) {}
 
-// TODO: Implementar casting
 void handle_cast(VM *vm, Instruction instr) {
     DataType from_type, to_type;
     uint8_t depth;
@@ -145,9 +145,6 @@ void handle_cast(VM *vm, Instruction instr) {
     
     push(&vm->stack, result);
 }
-
-// TODO: ¿Podremos quitarnoslo de encima? Lo dudo, pero se intentará
-void handle_objcall(VM *vm, Instruction instr) {}
 
 void handle_syscall(VM *vm, Instruction instr) {
     syscall(vm, instr.arg);

@@ -93,6 +93,9 @@ void built_in_type(VM *vm) {
     });
 }
 
+/*********************
+* I/O FILES SYSCALLS *
+*********************/
 void built_in_read(VM *vm) {
     FILE *file;
     int from, bytes_to_read;
@@ -170,6 +173,9 @@ void built_in_write(VM *vm) {
     });
 }
 
+/***************************
+* LIST AND STRING SYSCALLS *
+****************************/
 void built_in_size(VM* vm) {
     Item arr = pop(&vm->stack);
     push(&vm->stack, (Item) {
@@ -187,7 +193,6 @@ void built_in_append(VM* vm) {
     heap_write(&vm->heap, arr.value, item.value, vm->heap.blocks[arr.value].size, sizes[arr.type]);
 }
 
-// TODO: Para implementar
 void built_in_remove_at(VM* vm) {
     Item arr, index;
     arr = pop(&vm->stack); index = pop(&vm->stack);
@@ -211,7 +216,34 @@ void built_in_is_empty(VM* vm) {
 }
 
 void built_in_slice(VM* vm) {
-    
+    DataType arr_type;
+    Item arr, start, end;
+    arr = pop(&vm->stack); 
+    start = pop(&vm->stack); end = pop(&vm->stack);
+
+    if ((int) start.value <= -1) start.value = vm->heap.blocks[arr.value].size + start.value;
+    if ((int) end.value <= -1) end.value = vm->heap.blocks[arr.value].size + end.value;
+
+    arr_type = vm->heap.table_type[arr.value];
+    size_t new_arr = heap_add_block(&vm->heap, arr_type);
+
+    int start_pos_original = start.value * sizes[arr_type];
+    int i = start.value; int j = 0;
+    int step = (end.value > start.value) ? 1 : -1;
+
+    // printf("%d %d %d ", i, step, end.value);
+
+    while (i != end.value + step) {
+        uint32_t buffer;
+        heap_read(&vm->heap, arr.value, &buffer, i * sizes[arr_type], sizes[arr_type]);
+        heap_write(&vm->heap, new_arr, buffer, j * sizes[arr_type], sizes[arr_type]);
+        i += step; j++;
+    }
+
+    push(&vm->stack, (Item){
+        ARRAY_TYPE,
+        new_arr
+    });
 }
 
 // TODO: 
@@ -232,19 +264,20 @@ void built_in_filter(VM* vm) {
 void built_in_min(VM* vm) {
     Item arr = pop(&vm->stack);
     size_t block_index = arr.value;
+    
     DataType arr_type = vm->heap.table_type[block_index];
     Memory* block = &vm->heap.blocks[block_index];
-
+    
     size_t elem_size = sizes[arr_type];
     size_t total_elems = block->size / elem_size;
-
+    
     uint32_t min_value;
     heap_read(&vm->heap, block_index, &min_value, 0, elem_size);
-
+    
     for (size_t i = 1; i < total_elems; i++) {
         uint32_t buffer;
         heap_read(&vm->heap, block_index, &buffer, i * elem_size, elem_size);
-
+        
         if (arr_type == FLOAT_TYPE) {
             float current = extract_float((Item){FLOAT_TYPE, buffer});
             float current_min = extract_float((Item){FLOAT_TYPE, min_value});
@@ -257,26 +290,27 @@ void built_in_min(VM* vm) {
             }
         }
     }
-
+    
     push(&vm->stack, (Item){arr_type, min_value});
 }
 
 void built_in_max(VM* vm) {
     Item arr = pop(&vm->stack);
     size_t block_index = arr.value;
+    
     DataType arr_type = vm->heap.table_type[block_index];
     Memory* block = &vm->heap.blocks[block_index];
-
+    
     size_t elem_size = sizes[arr_type];
     size_t total_elems = block->size / elem_size;
-
+    
     uint32_t max_value;
     heap_read(&vm->heap, block_index, &max_value, 0, elem_size);
-
+    
     for (size_t i = 1; i < total_elems; i++) {
         uint32_t buffer;
         heap_read(&vm->heap, block_index, &buffer, i * elem_size, elem_size);
-
+        
         if (arr_type == FLOAT_TYPE) {
             float current = extract_float((Item){FLOAT_TYPE, buffer});
             float current_min = extract_float((Item){FLOAT_TYPE, max_value});
@@ -289,15 +323,56 @@ void built_in_max(VM* vm) {
             }
         }
     }
-
+    
     push(&vm->stack, (Item){arr_type, max_value});
 }
 
-// TODO:
-void built_in_lower(VM* vm) {}
-void built_in_upper(VM* vm) {}
+void built_in_lower(VM* vm) {
+    Item arr = pop(&vm->stack);
 
-void built_in_toString(VM* vm) {}
+    if (vm->heap.table_type[arr.value] != CHAR_TYPE)
+        handle_error(UNDEFINED_ERROR);
+
+    size_t new_str = duplicate_heap_block(&vm->heap, arr.value, CHAR_TYPE, 1);
+    
+    for (int i = 0; i < vm->heap.blocks[new_str].size; i++) {
+        uint32_t buffer;
+        heap_read(&vm->heap, new_str, &buffer, i, 1);
+        if (buffer >= 'A' && buffer <= 'Z')
+        heap_write(&vm->heap, new_str, buffer + 32, i, 1);
+    }
+    
+    push(&vm->stack, (Item){
+        ARRAY_TYPE,
+        new_str
+    });
+}
+
+void built_in_upper(VM* vm) {
+    Item arr = pop(&vm->stack);
+
+    if (vm->heap.table_type[arr.value] != CHAR_TYPE)
+        handle_error(UNDEFINED_ERROR);
+
+    size_t new_str = duplicate_heap_block(&vm->heap, arr.value, CHAR_TYPE, 1);
+    
+    for (int i = 0; i < vm->heap.blocks[new_str].size; i++) {
+        uint32_t buffer;
+        heap_read(&vm->heap, new_str, &buffer, i, 1);
+        if (buffer >= 'a' && buffer <= 'z')
+        heap_write(&vm->heap, new_str, buffer - 32, i, 1);
+    }
+    
+    push(&vm->stack, (Item){
+        ARRAY_TYPE,
+        new_str
+    });
+}
+
+// TODO:
+void built_in_toString(VM* vm) {
+    
+}
 
 void (*builtins[])(VM *vm) = {
     built_in_exit,
@@ -312,8 +387,8 @@ void (*builtins[])(VM *vm) = {
     built_in_append,
     built_in_remove_at,
     built_in_is_empty,
-    built_in_map,
     built_in_slice,
+    built_in_map,
     built_in_filter,
     built_in_min,
     built_in_max,

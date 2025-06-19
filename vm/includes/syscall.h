@@ -3,7 +3,7 @@
 #include "alu.h"
 #include "errors.h"
 #include "stack.h"
-#include "strucs-type.h"
+#include "structs-type.h"
 
 #include <stdlib.h>
 #include <stdio.h>

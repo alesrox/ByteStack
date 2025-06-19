@@ -216,8 +216,15 @@ class Parser:
         
         self.next_token() # Consume ')'
         # if self.current_token.type == 'SEMICOLON': self.next_token()
+        func_enty = FunctionCall(func_id, arguments, from_obj)
         arguments =  self.semantic.check_function_call(func_id, arguments)
-        return FunctionCall(func_id, arguments, from_obj)
+        if self.current_token.type == 'POINT':
+            self.next_token() # Consume '.'
+            _id = self.current_token.value
+            self.next_token() # FUNC_ID_INFO
+            return self.function_call(_id, func_enty)
+
+        return func_enty
 
     def variable_declaration(self):
         var_type = self.current_token.type

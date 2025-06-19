@@ -1,5 +1,5 @@
 #pragma once
-#include "strucs-type.h"
+#include "structs-type.h"
 #include "errors.h"
 #include <stdlib.h>
 #include <string.h>

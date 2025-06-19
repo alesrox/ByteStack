@@ -1,4 +1,4 @@
-// TODO: Make .toString() function
+// TODO: .toString() function
 
 int[] list = [1, 2, 3, 57];
 // print("List: " + list.toString() + "\n");
@@ -15,11 +15,9 @@ string[] empty_list;
 if (empty_list.is_empty()) { print("It's empty\n"); } 
 else { print("It's not empty\n"); }
 
-// TODO: slice, lower and upper functions
 string hi = "Hello World!\n";
-print(hi.slice(0, 5) + "\n"); // Hello
-print(hi.lower());
-print(hi.upper());
+print(hi.slice(0, 4).upper() + " ");
+print(hi.slice(6, -2).lower() + "\n");
 
 int[] new_list = [23, 45, 12, 67, 34, 89, 56];
 print("Min: " + new_list.min() + "\n"); // 12

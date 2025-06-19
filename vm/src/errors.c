@@ -15,6 +15,6 @@ char* error_messages[ERR_COUNT] = {
 };
 
 void handle_error(ErrorCode code) {
-    printf("\n\033[1;31m!\033[0m %s (Instruction: %d)\n", error_messages[code], instr_pc_log);
+    printf("\n\033[1;31m!\033[0m %s (Instruction: %d - %d)\n", error_messages[code], instr_pc_log.opcode, instr_pc_log.arg);
     exit(EXIT_FAILURE);
 }

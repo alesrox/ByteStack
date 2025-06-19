@@ -63,7 +63,6 @@ OpcodeHandler opcode_handlers[] = {
     [0x1C] = handle_define_type,
     [0x1D] = handle_new,
     [0x1E] = handle_cast,
-    [0xFE] = handle_objcall,
     [0xFF] = handle_syscall,
 };
 
@@ -124,7 +123,7 @@ void string_format_proc(VM* vm) {
 void vm_run(VM *vm) {
     while (vm->pc < vm->bytecode + vm->program_size) {
         Instruction instr = *vm->pc++;
-        instr_pc_log = instr.opcode;
+        instr_pc_log = instr;
 
         if (instr.opcode < 0x0F) {
             alu(&vm->stack, instr.opcode);
@@ -132,6 +131,7 @@ void vm_run(VM *vm) {
             continue;
         }
         
+        // printf("%d %d\n", instr.opcode, instr.arg);
         OpcodeHandler handler = opcode_handlers[instr.opcode];
         if (!handler) handle_error(UNDEFINED_ERROR);
         handler(vm, instr);

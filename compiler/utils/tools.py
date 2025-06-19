@@ -36,23 +36,6 @@ def get_key(obj_dict: dict, element):
     
     return None
 
-# TODO: Deprecated, delete after checkout
-# def string_to_list(string: str) -> list:
-#     list_from_string = []
-#     string = string.replace('\\n', '\n')
-#     string = string.replace('\\t', '\t')
-
-#     string += '\0' * (-len(string) % 4)
-
-#     for i in range(0, len(string), 4):
-#         block = string[i:i + 4]
-#         packed = 0
-#         for j, char in enumerate(reversed(block)):
-#             packed |= ord(char) << (24 - j * 8)
-#         list_from_string.append(packed)
-
-#     return list_from_string
-
 def name(func_name: str, args: list, original: str):
     if original in args:
         return f'{func_name}.{original}'

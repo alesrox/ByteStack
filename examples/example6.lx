@@ -1,3 +1,5 @@
+// TODO: Structs Implementation
+
 struct test {
     int num1;
     int num2;

@@ -1,6 +1,6 @@
 #pragma once
 #include "../virtual_machine.h"
-#include "strucs-type.h"
+#include "structs-type.h"
 #include "syscall.h"
 
 typedef void (*OpcodeHandler)(VM*, Instruction);
