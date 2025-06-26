@@ -1,12 +1,12 @@
 #include "../includes/memory.h"
 
-size_t sizes[ARRAY_TYPE + 1] = {
+size_t sizes[POINTER_TYPE + 1] = {
     [UNASSIGNED_TYPE] = 4,
     [BOOL_TYPE]  = 1,
     [INT_TYPE]   = 4,
     [FLOAT_TYPE] = 4,
     [CHAR_TYPE]  = 1,
-    [ARRAY_TYPE] = 4
+    [POINTER_TYPE] = 4
 };
 
 void memory_init(Memory *mem) {
@@ -138,6 +138,9 @@ size_t duplicate_heap_block(Heap *heap, size_t address, DataType to_type, int de
 
 int heap_write(Heap *heap, size_t index, uint32_t value, size_t offset, size_t size) {
     if (index >= heap->size) handle_error(UNDEFINED_ERROR);
+
+    if (offset == (size_t) -1)
+        offset = heap->blocks[index].size;
 
     if (offset + size > heap->blocks[index].size) 
         memory_expand(&heap->blocks[index], offset + size);

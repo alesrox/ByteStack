@@ -72,8 +72,8 @@ void string_format_proc(VM* vm) {
 
     string_format = 0;
     
-    if (left.type == ARRAY_TYPE) {
-        if (right.type == ARRAY_TYPE) {
+    if (left.type == POINTER_TYPE) {
+        if (right.type == POINTER_TYPE) {
             uint32_t buffer;
             for (int i = 0; i < vm->heap.blocks[right.value].size; i++) {
                 heap_read(&vm->heap, right.value, &buffer, i, 1);
@@ -114,7 +114,7 @@ void string_format_proc(VM* vm) {
         }
 
         push(&vm->stack, (Item) {
-            ARRAY_TYPE,
+            POINTER_TYPE,
             address
         });
     }

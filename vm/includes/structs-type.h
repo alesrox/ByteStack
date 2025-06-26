@@ -7,7 +7,7 @@ typedef enum {
     INT_TYPE,
     FLOAT_TYPE,
     CHAR_TYPE,
-    ARRAY_TYPE,
+    POINTER_TYPE,
     OBJ_TYPE
 } DataType;
 

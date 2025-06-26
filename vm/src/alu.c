@@ -33,7 +33,7 @@ Item aritmetic_unit(Stack *stack, uint8_t op) {
     int requires_float = left.type == FLOAT_TYPE || right.type == FLOAT_TYPE;
     int div_mod_op = op == 0x04 || op == 0x05;
 
-    if (left.type == ARRAY_TYPE || right.type == ARRAY_TYPE) {
+    if (left.type == POINTER_TYPE || right.type == POINTER_TYPE) {
         push(stack, left);
         push(stack, right);
         string_format = 1;

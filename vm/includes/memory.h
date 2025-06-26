@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern size_t sizes[ARRAY_TYPE + 1];
+extern size_t sizes[POINTER_TYPE + 1];
 
 typedef struct {
     uint8_t *data;

@@ -67,7 +67,7 @@ void handle_build_list(VM *vm, Instruction instr) {
     if (instr.arg == 0) {
         push(&vm->stack, 
             (Item) { 
-                ARRAY_TYPE,
+                POINTER_TYPE,
                 heap_add_block(&vm->heap, UNASSIGNED_TYPE) 
             });
         return;
@@ -83,26 +83,26 @@ void handle_build_list(VM *vm, Instruction instr) {
         heap_write(&vm->heap, address, item.value, i*len, len);
     }
 
-    push(&vm->stack, (Item){ARRAY_TYPE, address});
+    push(&vm->stack, (Item){POINTER_TYPE, address});
 }
 
 void handle_list_access(VM *vm, Instruction instr) {
-    uint32_t value, index; DataType array_type;
+    uint32_t value, index; DataType POINTER_TYPE;
     size_t array_location, size_items;
 
     index = (instr.arg == (uint32_t) -1) ?
         pop(&vm->stack).value : instr.arg;
     
     array_location = pop(&vm->stack).value;
-    array_type = vm->heap.table_type[array_location];
-    size_items = sizes[array_type];
+    POINTER_TYPE = vm->heap.table_type[array_location];
+    size_items = sizes[POINTER_TYPE];
 
     heap_read(&vm->heap, array_location, &value, index * size_items, size_items);
-    push(&vm->stack, (Item){array_type, value});
+    push(&vm->stack, (Item){POINTER_TYPE, value});
 }
 
 void handle_list_set(VM *vm, Instruction instr) {
-    uint32_t value, index; DataType array_type;
+    uint32_t value, index; DataType POINTER_TYPE;
     size_t array_location, size_items;
 
     index = (instr.arg == (uint32_t) -1) ?
@@ -110,8 +110,8 @@ void handle_list_set(VM *vm, Instruction instr) {
     
     array_location = pop(&vm->stack).value;
     value = pop(&vm->stack).value;
-    array_type = vm->heap.table_type[array_location];
-    size_items = sizes[array_type];
+    POINTER_TYPE = vm->heap.table_type[array_location];
+    size_items = sizes[POINTER_TYPE];
     
     heap_write(&vm->heap, array_location, value, index * size_items, size_items);
 }
@@ -139,7 +139,7 @@ void handle_cast(VM *vm, Instruction instr) {
     } else if (to_type == BOOL_TYPE && depth == 0) {
         result.value = (int8_t) item.value;
     } else if (depth > 0) {
-        result.type = ARRAY_TYPE;
+        result.type = POINTER_TYPE;
         result.value = duplicate_heap_block(&vm->heap, item.value, to_type, depth);
     }
     

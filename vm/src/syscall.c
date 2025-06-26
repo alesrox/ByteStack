@@ -22,7 +22,7 @@ void built_in_subprint(Item item, FILE *out) {
 void built_in_print(VM *vm) {
     Item element = pop(&vm->stack);
 
-    if (element.type == ARRAY_TYPE) {
+    if (element.type == POINTER_TYPE) {
         Item item;
         Memory arr = vm->heap.blocks[element.value];
         DataType arr_type = vm->heap.table_type[element.value];
@@ -70,7 +70,7 @@ void built_in_scan(VM *vm) {
         heap_write(&vm->heap, address, input_str[i], i, 1);
     
     push(&vm->stack, (Item) {
-        ARRAY_TYPE,
+        POINTER_TYPE,
         address
     });
 }
@@ -79,7 +79,7 @@ void built_in_type(VM *vm) {
     DataType arg_type = pop(&vm->stack).type;
     size_t address = heap_add_block(&vm->heap, CHAR_TYPE);
 
-    char* get_type[ARRAY_TYPE + 1] = {
+    char* get_type[POINTER_TYPE + 1] = {
         "UNASSIGNED", "BYTE", "INT", "FLOAT",
         "CHAR", "ARRAY"
     };
@@ -88,7 +88,7 @@ void built_in_type(VM *vm) {
         heap_write(&vm->heap, address, get_type[arg_type][i], i, 1);
 
     push(&vm->stack, (Item) {
-        ARRAY_TYPE,
+        POINTER_TYPE,
         address
     });
 }
@@ -131,7 +131,7 @@ void built_in_read(VM *vm) {
 
     fclose(file);
     push(&vm->stack, (Item) {
-        ARRAY_TYPE,
+        POINTER_TYPE,
         address
     });
 }
@@ -241,7 +241,7 @@ void built_in_slice(VM* vm) {
     }
 
     push(&vm->stack, (Item){
-        ARRAY_TYPE,
+        POINTER_TYPE,
         new_arr
     });
 }
@@ -343,7 +343,7 @@ void built_in_lower(VM* vm) {
     }
     
     push(&vm->stack, (Item){
-        ARRAY_TYPE,
+        POINTER_TYPE,
         new_str
     });
 }
@@ -364,13 +364,13 @@ void built_in_upper(VM* vm) {
     }
     
     push(&vm->stack, (Item){
-        ARRAY_TYPE,
+        POINTER_TYPE,
         new_str
     });
 }
 
 // TODO:
-void built_in_toString(VM* vm) {
+void built_in_toString(VM* vm) { 
     
 }
 
