@@ -39,7 +39,6 @@ Example:
 ```
 
 ## Next Step
-- toString function
 - filter and map functions
 - Structs implementation
 - Fixing some bugs
