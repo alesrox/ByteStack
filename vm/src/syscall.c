@@ -180,7 +180,7 @@ void built_in_size(VM* vm) {
     Item arr = pop(&vm->stack);
     push(&vm->stack, (Item) {
         INT_TYPE,
-        vm->heap.blocks[arr.value].size
+        vm->heap.blocks[arr.value].size / sizes[vm->heap.table_type[arr.value]]
     });
 }
 
@@ -230,8 +230,6 @@ void built_in_slice(VM* vm) {
     int start_pos_original = start.value * sizes[arr_type];
     int i = start.value; int j = 0;
     int step = (end.value > start.value) ? 1 : -1;
-
-    // printf("%d %d %d ", i, step, end.value);
 
     while (i != end.value + step) {
         uint32_t buffer;
