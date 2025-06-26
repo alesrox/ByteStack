@@ -369,9 +369,73 @@ void built_in_upper(VM* vm) {
     });
 }
 
-// TODO:
-void built_in_toString(VM* vm) { 
+void write_char(VM *vm, size_t index, char c) {
+    heap_write(&vm->heap, index, (uint32_t)c, -1, 1);
+}
+
+void write_string(VM *vm, size_t index, const char *str) {
+    while (*str) {
+        write_char(vm, index, *str++);
+    }
+}
+
+void aux_built_in_toString(VM* vm, Item item, size_t index) {
+    if (item.type == CHAR_TYPE) {
+        write_char(vm, index, (char)item.value);
+        return;
+    }
     
+    char buffer[32];
+    if (item.type == INT_TYPE) {
+        snprintf(buffer, sizeof(buffer), "%d", (int)item.value);
+    } else if (item.type == FLOAT_TYPE) {
+        snprintf(buffer, sizeof(buffer), "%g", extract_float(item));
+    } else if (item.type == BOOL_TYPE) {
+        if (item.value == 1) strcpy(buffer, "True");
+        else if (item.value == 0) strcpy(buffer, "False");
+        // It's a Byte Type not a Bool Type
+        else snprintf(buffer, sizeof(buffer), "%u", item.value);
+    } else {
+        snprintf(buffer, sizeof(buffer), "%u", item.value);
+    }
+
+    write_string(vm, index, buffer);
+}
+
+void to_string_recursive(VM *vm, Item item, size_t index_result) {
+    if (item.type != POINTER_TYPE) {
+        aux_built_in_toString(vm, item, index_result);
+        return;
+    }
+
+    size_t block_index = item.value;
+    Memory *block = &vm->heap.blocks[block_index];
+    DataType elem_type = vm->heap.table_type[block_index];
+    size_t elem_size = sizes[elem_type];
+    size_t count = block->size / elem_size;
+
+    write_char(vm, index_result, '[');
+    for (size_t i = 0; i < count; i++) {
+        uint32_t val;
+        heap_read(&vm->heap, block_index, &val, i * elem_size, elem_size);
+        Item child = (Item){elem_type, val};
+
+        to_string_recursive(vm, child, index_result);
+
+        if (i != count - 1) {
+            write_string(vm, index_result, ", ");
+        }
+    }
+    write_char(vm, index_result, ']');
+}
+
+void built_in_toString(VM* vm) {
+    Item element = pop(&vm->stack);
+    size_t result = heap_add_block(&vm->heap, CHAR_TYPE);
+
+    to_string_recursive(vm, element, result);
+
+    push(&vm->stack, (Item){POINTER_TYPE, result});
 }
 
 void (*builtins[])(VM *vm) = {

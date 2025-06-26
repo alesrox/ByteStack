@@ -1,15 +1,13 @@
-// TODO: .toString() function
-
 int[] list = [1, 2, 3, 57];
-// print("List: " + list.toString() + "\n");
+print("List: " + list.toString() + "\n");
 list.append(40); 
 list.remove_at(2); 
-// print("Modded list: " + list.toString() + "\n");
+print("Modded list: " + list.toString() + "\n");
 print("Size list: " + list.size() + "\n");
 
 int[][] matriz = [[1, 10], [3, 4]];
 matriz[0][1] = 2;
-// print("Matriz: " + matriz.toString() + "\n");
+print("Matriz: " + matriz.toString() + "\n");
 
 string[] empty_list;
 if (empty_list.is_empty()) { print("It's empty\n"); } 
